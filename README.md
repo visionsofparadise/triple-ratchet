@@ -1,0 +1,271 @@
+# @xkore/triple-ratchet
+
+Transport-agnostic bounded triple ratchet for quantum-resistant encrypted P2P communication.
+
+## Overview
+
+**@xkore/triple-ratchet** provides end-to-end encrypted sessions between peers using a bounded triple ratchet protocol combining:
+
+- **ML-KEM-1024** (NIST FIPS 203) - Quantum-resistant key encapsulation
+- **X25519** - Classical ECDH for defense-in-depth
+- **XChaCha20-Poly1305** - Authenticated encryption
+- **Bounded rotation** - Enforced message/time limits to prevent stale quantum-resistant keys
+
+Inspired by Signal's SPQR protocol, adapted for P2P environments where communication can be one-sided.
+
+## Features
+
+- ✅ **Transport-agnostic** - No I/O, no network, pure crypto
+- ✅ **Event-based API** - Emit `send` events, handle `receive` calls
+- ✅ **Out-of-band key exchange** - User controls key distribution
+- ✅ **Automatic ratcheting** - Forward & backward secrecy
+- ✅ **Bounded rotation** - Time & message-based ML-KEM rotation
+- ✅ **Out-of-order handling** - Skipped message keys (up to 1000 gap)
+- ✅ **Serializable state** - Persist sessions with `getState()`
+- ✅ **Browser compatible** - No Node.js dependencies
+
+## Installation
+
+```bash
+npm install @xkore/triple-ratchet
+```
+
+## Quick Start
+
+```typescript
+import { Session, Keys, RatchetKeysItem } from '@xkore/triple-ratchet';
+
+// Setup local keys
+const localKeys = new Keys();
+const localInitiationKeys = new RatchetKeysItem();
+
+// Get remote peer's public initiation keys (out-of-band exchange)
+const remoteInitiationKeys = remoteInitiationKeysFromSomewhere;
+
+// Create session
+const session = new Session({
+  localKeys,
+  localInitiationKeys,
+  remoteNodeId: remoteKeys.nodeId,
+  remoteInitiationKeys
+});
+
+// Handle outgoing buffers
+session.on('send', (buffer) => {
+  myTransport.send(remoteAddress, buffer);
+});
+
+// Handle incoming decrypted messages
+session.on('message', (data) => {
+  console.log('Received:', data);
+});
+
+// Handle state changes (for persistence)
+session.on('stateChanged', () => {
+  db.put(remoteNodeId, session.getState());
+});
+
+// Send encrypted data
+await session.send(new TextEncoder().encode('hello'));
+
+// Receive from transport
+myTransport.on('message', (buffer) => {
+  session.receive(buffer);
+});
+```
+
+## Key Exchange
+
+Initiation keys must be exchanged out-of-band. Example using HTTP:
+
+```typescript
+// Publish your keys
+app.get('/initiation-keys', (req, res) => {
+  res.json({
+    keyId: Array.from(localInitiationKeys.keyId),
+    encryptionKey: Array.from(localInitiationKeys.encryptionKey),
+    dhPublicKey: Array.from(localInitiationKeys.dhPublicKey)
+  });
+});
+
+// Fetch remote peer's keys
+const response = await fetch(`https://peer.example.com/initiation-keys`);
+const remoteKeys = await response.json();
+
+const session = new Session({
+  localKeys,
+  localInitiationKeys,
+  remoteNodeId,
+  remoteInitiationKeys: {
+    keyId: new Uint8Array(remoteKeys.keyId),
+    encryptionKey: new Uint8Array(remoteKeys.encryptionKey),
+    dhPublicKey: new Uint8Array(remoteKeys.dhPublicKey)
+  }
+});
+```
+
+## Session Persistence
+
+Sessions can be serialized and restored:
+
+```typescript
+// Save session state
+const state = session.getState();
+await db.put(remoteNodeId, JSON.stringify({
+  ratchetState: state ? {
+    ratchetId: Array.from(state.ratchetId),
+    remoteKeyId: state.remoteKeyId ? Array.from(state.remoteKeyId) : undefined,
+    rootChain: state.rootChain, // Complex object, handle serialization
+    previousChainLength: state.previousChainLength,
+    skippedKeys: state.skippedKeys,
+    ratchetAt: state.ratchetAt
+  } : undefined
+}));
+
+// Restore session
+const savedState = JSON.parse(await db.get(remoteNodeId));
+const restoredState = savedState ? RatchetStateItem.fromBuffer(
+  new Uint8Array(savedState.ratchetId),
+  serializeStateToBuffer(savedState) // Implement serialization
+) : undefined;
+
+const session = new Session({
+  localKeys,
+  localInitiationKeys,
+  remoteNodeId,
+  remoteInitiationKeys,
+  state: restoredState
+});
+```
+
+## Transport Integration
+
+### WebSocket Example
+
+```typescript
+const ws = new WebSocket('wss://peer.example.com');
+
+session.on('send', (buffer) => {
+  ws.send(buffer);
+});
+
+ws.on('message', (data) => {
+  session.receive(new Uint8Array(data));
+});
+```
+
+### UDP Example
+
+```typescript
+import dgram from 'dgram';
+
+const socket = dgram.createSocket('udp4');
+
+session.on('send', (buffer) => {
+  socket.send(buffer, remotePort, remoteHost);
+});
+
+socket.on('message', (buffer) => {
+  session.receive(buffer);
+});
+```
+
+## Security Properties
+
+- **Forward secrecy**: Compromised state doesn't reveal past messages
+- **Backward secrecy**: Compromised state doesn't reveal future messages after next ratchet
+- **Post-quantum security**: ML-KEM-1024 protects against quantum computers
+- **Bounded rotation**: Keys rotate every 100 messages or 1 hour (configurable)
+- **Out-of-order tolerance**: Up to 1000 message gap before rejection (DoS protection)
+
+## Configuration
+
+Session can be configured via constructor options:
+
+```typescript
+// Coming in future version - currently uses defaults:
+// - messageBound: 100 messages before rotation
+// - timeBound: 3600000ms (1 hour) before rotation
+// - maxSkippedKeys: 1000 maximum message gap
+```
+
+## API Reference
+
+### Session
+
+```typescript
+class Session {
+  constructor(options: SessionOptions)
+  send(data: Uint8Array): Promise<void>
+  receive(buffer: Uint8Array): void
+  getState(): RatchetStateItem | undefined
+  setRemoteInitiationKeys(keys: RatchetKeysPublic): void
+
+  // Events
+  on('send', (buffer: Uint8Array) => void)
+  on('message', (data: Uint8Array) => void)
+  on('stateChanged', () => void)
+  on('error', (error: Error) => void)
+}
+```
+
+### Keys
+
+```typescript
+class Keys {
+  constructor(properties?: { secretKey?: Uint8Array })
+  readonly secretKey: Uint8Array
+  readonly publicKey: Uint8Array
+  readonly nodeId: Uint8Array
+  rSign(message: Uint8Array): RSignature
+  static recover(signature: RSignature, message: Uint8Array): Uint8Array
+}
+```
+
+### RatchetKeysItem
+
+```typescript
+class RatchetKeysItem {
+  constructor(properties?: { dhSecretKey?: Uint8Array; mlKemSeed?: Uint8Array })
+  readonly keyId: Uint8Array
+  readonly encryptionKey: Uint8Array
+  readonly decryptionKey: Uint8Array
+  readonly dhPublicKey: Uint8Array
+  get publicKeys(): RatchetKeysPublic
+  toPublicBuffer(): Uint8Array
+  static fromPublicBuffer(buffer: Uint8Array): RatchetKeysPublic
+}
+```
+
+## Architecture
+
+```
+Session (event-based communication)
+  ├─ Keys (secp256k1 identity)
+  ├─ RatchetKeysItem (ML-KEM-1024 + X25519 initiation keys)
+  └─ RatchetStateItem (per-peer triple ratchet state)
+      ├─ RootChain (root key + DH ratchet)
+      │   ├─ KeyChain (symmetric sending chain)
+      │   └─ KeyChain (symmetric receiving chain)
+      └─ Envelope (wire format with XChaCha20-Poly1305)
+```
+
+## Comparison to Signal Protocol
+
+| Feature | Signal | @xkore/triple-ratchet |
+|---------|--------|----------------------|
+| Quantum resistance | SPQR (optional) | ML-KEM-1024 (always) |
+| Transport | Centralized server | Any transport |
+| Key exchange | X3DH | Out-of-band |
+| Rotation bounds | None | Enforced (100 msg/1h) |
+| Use case | Mobile messaging | P2P applications |
+
+## License
+
+MIT
+
+## Credits
+
+Built with [@noble/post-quantum](https://github.com/paulmillr/noble-post-quantum), [@noble/curves](https://github.com/paulmillr/noble-curves), and [@noble/ciphers](https://github.com/paulmillr/noble-ciphers).
+
+Inspired by [Signal's SPQR protocol](https://signal.org/docs/specifications/pqxdh/).

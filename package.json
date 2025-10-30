@@ -1,0 +1,37 @@
+{
+	"name": "@xkore/triple-ratchet",
+	"version": "0.1.0",
+	"type": "module",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "tsup",
+		"check": "tsc --noEmit",
+		"unit": "vitest run unit",
+		"integration": "vitest run integration --no-file-parallelism",
+		"test:watch": "vitest"
+	},
+	"dependencies": {
+		"@noble/ciphers": "^2.0.1",
+		"@noble/curves": "^1.6.0",
+		"@noble/hashes": "^1.5.0",
+		"@noble/post-quantum": "^0.5.2",
+		"@scure/base": "^1.2.4",
+		"@types/events": "^3.0.3",
+		"bufferfy": "^3.0.7",
+		"uint8array-tools": "^0.0.9"
+	},
+	"devDependencies": {
+		"@types/node": "^22.0.0",
+		"tsup": "^8.0.0",
+		"typescript": "^5.5.2",
+		"vitest": "^4.0.3"
+	}
+}
