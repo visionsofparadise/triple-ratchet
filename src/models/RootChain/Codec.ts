@@ -1,10 +1,10 @@
 import { Codec } from "bufferfy";
 import { RootChain } from ".";
 import { KeyChainCodec } from "../KeyChain/Codec";
-import { X25519PublicKeyCodec, X25519SecretKeyCodec } from "../RatchetKeysItem/X25519Codec";
+import { X25519PublicKeyCodec, X25519SecretKeyCodec } from "../RatchetKeys/X25519Codec";
 import { RootKeyCodec } from "./KeyCodec";
 
-export const RootChainProperties = Codec.Object({
+export const RootChainPropertiesCodec = Codec.Object({
 	rootKey: RootKeyCodec,
 	dhSecretKey: X25519SecretKeyCodec,
 	remoteDhPublicKey: X25519PublicKeyCodec,
@@ -12,15 +12,9 @@ export const RootChainProperties = Codec.Object({
 	receivingChain: KeyChainCodec,
 });
 
-export interface RootChainProperties extends Codec.Type<typeof RootChainProperties> {}
+export type RootChainProperties = Codec.Type<typeof RootChainPropertiesCodec>;
 
-export const RootChainCodec = Codec.Transform(RootChainProperties, {
+export const RootChainCodec = Codec.Transform(RootChainPropertiesCodec, {
 	decode: (properties) => new RootChain(properties),
-	encode: (rootChain) => ({
-		rootKey: rootChain.rootKey,
-		dhSecretKey: rootChain.dhSecretKey,
-		remoteDhPublicKey: rootChain.remoteDhPublicKey,
-		sendingChain: rootChain.sendingChain,
-		receivingChain: rootChain.receivingChain,
-	}),
+	encode: (rootChain) => rootChain.properties,
 });

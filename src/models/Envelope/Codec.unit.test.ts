@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { x25519 } from "@noble/curves/ed25519";
-import { CipherData } from "../CipherData/index.js";
-import { Keys } from "../Keys/index.js";
-import { Envelope } from "./index.js";
-import { EnvelopeCodec } from "./Codec.js";
+import { CipherData } from "../CipherData/index";
+import { Keys } from "../Keys/index";
+import { Envelope } from "./index";
+import { EnvelopeCodec } from "./Codec";
 
 describe("Envelope serialization", () => {
 	it("should serialize and deserialize envelope correctly", () => {

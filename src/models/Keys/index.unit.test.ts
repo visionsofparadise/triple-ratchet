@@ -1,7 +1,6 @@
 import { secp256k1 } from "@noble/curves/secp256k1";
 import { compare } from "uint8array-tools";
 import { describe, expect, it } from "vitest";
-import { createShortHash } from "../../utilities/Hash";
 import { Keys } from "./index";
 
 describe("Keys", () => {
@@ -11,8 +10,6 @@ describe("Keys", () => {
 
 			expect(keys.secretKey.length).toBe(32);
 			expect(keys.publicKey.length).toBe(33); // compressed secp256k1
-			expect(keys.nodeId.length).toBe(20); // short hash
-			expect(keys.nodeIdCheck.length).toBe(24); // nodeId + 4-byte check
 		});
 
 		it("should use provided secretKey", () => {
@@ -30,22 +27,12 @@ describe("Keys", () => {
 			expect(compare(keys.publicKey, expectedPublicKey)).toBe(0);
 		});
 
-		it("should derive correct nodeId from publicKey", () => {
-			const secretKey = secp256k1.utils.randomPrivateKey();
-			const publicKey = secp256k1.getPublicKey(secretKey, true);
-			const expectedNodeId = createShortHash(publicKey);
-			const keys = new Keys({ secretKey });
-
-			expect(compare(keys.nodeId, expectedNodeId)).toBe(0);
-		});
-
 		it("should create different keys on each instantiation without secretKey", () => {
 			const keys1 = new Keys();
 			const keys2 = new Keys();
 
 			expect(compare(keys1.secretKey, keys2.secretKey)).not.toBe(0);
 			expect(compare(keys1.publicKey, keys2.publicKey)).not.toBe(0);
-			expect(compare(keys1.nodeId, keys2.nodeId)).not.toBe(0);
 		});
 	});
 
@@ -56,12 +43,8 @@ describe("Keys", () => {
 
 			expect(properties).toHaveProperty("secretKey");
 			expect(properties).toHaveProperty("publicKey");
-			expect(properties).toHaveProperty("nodeId");
-			expect(properties).toHaveProperty("nodeIdCheck");
 			expect(compare(properties.secretKey, keys.secretKey)).toBe(0);
 			expect(compare(properties.publicKey, keys.publicKey)).toBe(0);
-			expect(compare(properties.nodeId, keys.nodeId)).toBe(0);
-			expect(compare(properties.nodeIdCheck, keys.nodeIdCheck)).toBe(0);
 		});
 	});
 
@@ -223,7 +206,7 @@ describe("Keys", () => {
 			const message = crypto.getRandomValues(new Uint8Array(32));
 			const rSignature = keys.rSign(message);
 
-			const isValid = Keys.isRVerified(rSignature, message, keys.nodeId);
+			const isValid = Keys.isRVerified(rSignature, message, keys.publicKey);
 			expect(isValid).toBe(true);
 		});
 
@@ -233,17 +216,17 @@ describe("Keys", () => {
 			const message2 = crypto.getRandomValues(new Uint8Array(32));
 			const rSignature = keys.rSign(message1);
 
-			const isValid = Keys.isRVerified(rSignature, message2, keys.nodeId);
+			const isValid = Keys.isRVerified(rSignature, message2, keys.publicKey);
 			expect(isValid).toBe(false);
 		});
 
-		it("should reject signature with wrong nodeId", () => {
+		it("should reject signature with wrong publicKey", () => {
 			const keys1 = new Keys();
 			const keys2 = new Keys();
 			const message = crypto.getRandomValues(new Uint8Array(32));
 			const rSignature = keys1.rSign(message);
 
-			const isValid = Keys.isRVerified(rSignature, message, keys2.nodeId);
+			const isValid = Keys.isRVerified(rSignature, message, keys2.publicKey);
 			expect(isValid).toBe(false);
 		});
 
@@ -255,7 +238,7 @@ describe("Keys", () => {
 			// Tamper with signature
 			rSignature.signature[0]! ^= 0xff;
 
-			const isValid = Keys.isRVerified(rSignature, message, keys.nodeId);
+			const isValid = Keys.isRVerified(rSignature, message, keys.publicKey);
 			expect(isValid).toBe(false);
 		});
 
@@ -269,7 +252,7 @@ describe("Keys", () => {
 				recoveryBit: 0,
 			};
 
-			const isValid = Keys.isRVerified(invalidRSignature, message, keys.nodeId);
+			const isValid = Keys.isRVerified(invalidRSignature, message, keys.publicKey);
 			expect(isValid).toBe(false);
 		});
 	});

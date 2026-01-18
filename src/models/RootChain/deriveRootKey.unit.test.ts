@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RootChain } from "./index.js";
+import { RootChain } from "./index";
 
 describe("RootChain.deriveRootKey", () => {
 	it("should produce 32-byte root key and 32-byte chain key", () => {

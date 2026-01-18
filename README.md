@@ -33,11 +33,11 @@ npm install @xkore/triple-ratchet
 ## Quick Start
 
 ```typescript
-import { Session, Keys, RatchetKeysItem } from '@xkore/triple-ratchet';
+import { Session, Keys, RatchetKeys } from '@xkore/triple-ratchet';
 
 // Setup local keys
 const localKeys = new Keys();
-const localInitiationKeys = new RatchetKeysItem();
+const localInitiationKeys = new RatchetKeys();
 
 // Get remote peer's public initiation keys (out-of-band exchange)
 const remoteInitiationKeys = remoteInitiationKeysFromSomewhere;
@@ -124,7 +124,7 @@ await db.put(remoteNodeId, JSON.stringify({
 
 // Restore session
 const savedState = JSON.parse(await db.get(remoteNodeId));
-const restoredState = savedState ? RatchetStateItem.fromBuffer(
+const restoredState = savedState ? RatchetState.fromBuffer(
   new Uint8Array(savedState.ratchetId),
   serializeStateToBuffer(savedState) // Implement serialization
 ) : undefined;
@@ -198,8 +198,8 @@ class Session {
   constructor(options: SessionOptions)
   send(data: Uint8Array): Promise<void>
   receive(buffer: Uint8Array): void
-  getState(): RatchetStateItem | undefined
-  setRemoteInitiationKeys(keys: RatchetKeysPublic): void
+  getState(): RatchetState | undefined
+  setRemoteInitiationKeys(keys: RatchetPublicKeys): void
 
   // Events
   on('send', (buffer: Uint8Array) => void)
@@ -222,18 +222,18 @@ class Keys {
 }
 ```
 
-### RatchetKeysItem
+### RatchetKeys
 
 ```typescript
-class RatchetKeysItem {
+class RatchetKeys {
   constructor(properties?: { dhSecretKey?: Uint8Array; mlKemSeed?: Uint8Array })
   readonly keyId: Uint8Array
   readonly encryptionKey: Uint8Array
   readonly decryptionKey: Uint8Array
   readonly dhPublicKey: Uint8Array
-  get publicKeys(): RatchetKeysPublic
+  get publicKeys(): RatchetPublicKeys
   toPublicBuffer(): Uint8Array
-  static fromPublicBuffer(buffer: Uint8Array): RatchetKeysPublic
+  static fromPublicBuffer(buffer: Uint8Array): RatchetPublicKeys
 }
 ```
 
@@ -242,8 +242,8 @@ class RatchetKeysItem {
 ```
 Session (event-based communication)
   ├─ Keys (secp256k1 identity)
-  ├─ RatchetKeysItem (ML-KEM-1024 + X25519 initiation keys)
-  └─ RatchetStateItem (per-peer triple ratchet state)
+  ├─ RatchetKeys (ML-KEM-1024 + X25519 initiation keys)
+  └─ RatchetState (per-peer triple ratchet state)
       ├─ RootChain (root key + DH ratchet)
       │   ├─ KeyChain (symmetric sending chain)
       │   └─ KeyChain (symmetric receiving chain)

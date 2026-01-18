@@ -1,105 +1,79 @@
-import { RequiredProperties } from "../../utilities/types.js";
-
-import { createCheck } from "../../utilities/check";
-import { createChecksum, createShortHash } from "../../utilities/Hash";
-import { CipherData } from "../CipherData";
+import { Codec } from "bufferfy";
+import { compare } from "uint8array-tools";
+import { createHash } from "../../utilities/Hash";
+import type { RequiredProperties } from "../../utilities/RequiredProperties";
+import type { CipherData } from "../CipherData";
 import { Keys } from "../Keys";
-import { RSignature } from "../Keys/Codec";
-import { EnvelopeCodec, EnvelopeProperties } from "./Codec";
-import { createEnvelope } from "./methods/create";
-import { decryptEnvelope } from "./methods/decrypt";
-import { encryptEnvelope } from "./methods/encrypt";
-import { hashEnvelope } from "./methods/hash";
-import { updateEnvelope } from "./methods/update";
-import { verifyEnvelope } from "./methods/verify";
+import type { RSignature } from "../Keys/Codec";
+import { MlKemCipherTextCodec } from "../RatchetKeys/MlKemCodec";
+import { EnvelopeCodec, type EnvelopeProperties, EnvelopePropertiesCodec } from "./Codec";
 
-export type { EncryptOptions } from "./methods/encrypt";
+export interface EncryptOptions {
+	messageBound?: number;
+	timeBound?: number;
+}
 
 export namespace Envelope {
-	export interface Properties extends EnvelopeProperties {
-		version: number;
-		keyId: Uint8Array;
-		dhPublicKey: Uint8Array;
-		messageNumber: number;
-		previousChainLength: number;
-		kemCiphertext?: Uint8Array;
-		cipherData: CipherData;
-		rSignature: RSignature;
-	}
+	export interface Properties extends EnvelopeProperties {}
 
 	export interface Cache {
 		buffer?: Uint8Array;
 		byteLength?: number;
-		checksum?: Uint8Array;
 		hash?: Uint8Array;
-		nodeId?: Uint8Array;
-		nodeIdCheck?: Uint8Array;
 		publicKey?: Uint8Array;
 	}
 }
 
+// Low-order X25519 points that should be rejected
+const LOW_ORDER_POINTS = [
+	new Uint8Array(32), // All zeros
+	new Uint8Array(32).fill(1), // Point of order 1
+	new Uint8Array([
+		0x5f, 0x9c, 0x95, 0xbc, 0xa3, 0x50, 0x8c, 0x24, 0xb1, 0xd0, 0xb1, 0x55, 0x9c, 0x83, 0xef, 0x5b, 0x04, 0x44, 0x5c, 0xc4, 0x58, 0x1c, 0x8e, 0x86, 0xd8, 0x22, 0x4e, 0xdd, 0xd0, 0x9f, 0x11, 0x57,
+	]), // Point of order 2
+	new Uint8Array([
+		0xe0, 0xeb, 0x7a, 0x7c, 0x3b, 0x41, 0xb8, 0xae, 0x16, 0x56, 0xe3, 0xfa, 0xf1, 0x9f, 0xc4, 0x6a, 0xda, 0x09, 0x8d, 0xeb, 0x9c, 0x32, 0xb1, 0xfd, 0x86, 0x62, 0x05, 0x16, 0x5f, 0x49, 0xb8, 0x00,
+	]), // Point of order 4
+	new Uint8Array([
+		0xec, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f,
+	]), // Point of order 8
+];
+
 export class Envelope implements Envelope.Properties {
 	static PROTOCOL_VERSION = 0x01;
 
-	/**
-	 * Creates a new envelope with encrypted data and signature.
-	 *
-	 * Static factory method that creates a complete envelope with all required properties,
-	 * computes the hash, signs it with the provided keys, and returns the envelope instance.
-	 * Typically used when manually constructing envelopes - most applications should use
-	 * encrypt() instead.
-	 *
-	 * @param properties - Envelope properties (version defaults to 0x01 if not provided)
-	 * @param properties.keyId - Recipient's ratchet key identifier (8 bytes)
-	 * @param properties.dhPublicKey - Sender's ephemeral X25519 public key (32 bytes)
-	 * @param properties.messageNumber - Current message number in the sending chain
-	 * @param properties.previousChainLength - Length of previous receiving chain (for DH ratchet)
-	 * @param properties.cipherData - Encrypted message data with authentication tag
-	 * @param properties.kemCiphertext - Optional ML-KEM ciphertext (for KEM ratchet rotation)
-	 * @param keys - Sender's identity keys for signing
-	 * @returns New envelope instance with computed hash and signature
-	 *
-	 * @example
-	 * ```typescript
-	 * const envelope = Envelope.create({
-	 *   keyId: recipientKeyId,
-	 *   dhPublicKey: ephemeralDhPublicKey,
-	 *   messageNumber: 0,
-	 *   previousChainLength: 0,
-	 *   cipherData: encryptedData
-	 * }, senderKeys);
-	 * ```
-	 */
-	static create = createEnvelope;
+	static create(properties: RequiredProperties<Envelope.Properties, "keyId" | "dhPublicKey" | "messageNumber" | "previousChainLength" | "cipherData">, keys: Keys): Envelope {
+		const defaultProperties: Omit<Envelope.Properties, "rSignature"> = {
+			version: properties.version ?? 0x01,
+			keyId: properties.keyId,
+			dhPublicKey: properties.dhPublicKey,
+			messageNumber: properties.messageNumber,
+			previousChainLength: properties.previousChainLength,
+			kemCiphertext: properties.kemCiphertext,
+			cipherData: properties.cipherData,
+		};
 
-	/**
-	 * Encrypts data into an envelope using ratchet state.
-	 *
-	 * Static factory method that handles the complete encryption flow: checks if ML-KEM rotation
-	 * is needed based on message/time bounds, performs rotation if required, encrypts the message,
-	 * and returns the envelope. Updates the ratchet state in place.
-	 *
-	 * @param data - Plaintext data to encrypt
-	 * @param ratchetState - Current ratchet state for the session
-	 * @param keys - Sender's identity keys for signing
-	 * @param initiationKeys - Optional recipient initiation keys (required if performing ML-KEM rotation)
-	 * @param options - Optional bounds for ML-KEM rotation
-	 * @param options.messageBound - Override default message count before rotation
-	 * @param options.timeBound - Override default time in ms before rotation
-	 * @returns Encrypted and signed envelope
-	 *
-	 * @example
-	 * ```typescript
-	 * const envelope = Envelope.encrypt(
-	 *   messageData,
-	 *   ratchetState,
-	 *   senderKeys,
-	 *   recipientInitiationKeys
-	 * );
-	 * ```
-	 */
-	static encrypt = encryptEnvelope;
-	static hash = hashEnvelope;
+		const hash = Envelope.hash(defaultProperties);
+
+		const rSignature = keys.rSign(hash);
+
+		const envelope = new Envelope(
+			{
+				...defaultProperties,
+				rSignature,
+			},
+			{
+				hash,
+				publicKey: keys.publicKey,
+			},
+		);
+
+		return envelope;
+	}
+
+	static hash(properties: Omit<Envelope.Properties, "rSignature">): Uint8Array {
+		return createHash(Codec.Omit(EnvelopePropertiesCodec, ["rSignature"]).encode(properties));
+	}
 
 	readonly version = 0x01;
 	readonly keyId: Uint8Array;
@@ -110,73 +84,33 @@ export class Envelope implements Envelope.Properties {
 	readonly cipherData: CipherData;
 	readonly rSignature: RSignature;
 
-	/**
-	 * Creates an Envelope instance from decoded wire format properties.
-	 *
-	 * Low-level constructor typically used by the codec during deserialization.
-	 * Most applications should use Envelope.create() or Overlay.wrap() instead.
-	 *
-	 * @param properties - Envelope properties from wire format
-	 * @param properties.keyId - Recipient's ratchet key identifier (8 bytes)
-	 * @param properties.dhPublicKey - Sender's ephemeral X25519 public key (32 bytes)
-	 * @param properties.messageNumber - Current message number in the sending chain
-	 * @param properties.previousChainLength - Length of previous receiving chain
-	 * @param properties.cipherData - Encrypted data with XChaCha20-Poly1305
-	 * @param properties.rSignature - Recoverable ECDSA signature over envelope hash
-	 * @param properties.kemCiphertext - Optional ML-KEM-1024 ciphertext for rotation
-	 * @param cache - Optional pre-computed values (hash, publicKey, nodeId) to avoid recalculation
-	 *
-	 * @example
-	 * ```typescript
-	 * const envelope = new Envelope({
-	 *   keyId,
-	 *   dhPublicKey,
-	 *   messageNumber: 5,
-	 *   previousChainLength: 3,
-	 *   cipherData,
-	 *   rSignature
-	 * });
-	 * ```
-	 */
 	constructor(
-		properties: RequiredProperties<Envelope.Properties, "keyId" | "dhPublicKey" | "messageNumber" | "previousChainLength" | "cipherData" | "rSignature">,
-		public cache: Envelope.Cache = {}
+		properties: RequiredProperties<Envelope.Properties, "keyId" | "dhPublicKey" | "cipherData" | "rSignature">,
+		public cache: Envelope.Cache = {},
 	) {
 		this.keyId = properties.keyId;
 		this.dhPublicKey = properties.dhPublicKey;
-		this.messageNumber = properties.messageNumber;
-		this.previousChainLength = properties.previousChainLength;
+		this.messageNumber = properties.messageNumber ?? 0;
+		this.previousChainLength = properties.previousChainLength ?? 0;
 		this.kemCiphertext = properties.kemCiphertext;
 		this.cipherData = properties.cipherData;
 		this.rSignature = properties.rSignature;
 	}
 
 	get buffer(): Uint8Array {
-		return this.cache.buffer || (this.cache.buffer = EnvelopeCodec.encode(this));
+		return this.cache.buffer ?? (this.cache.buffer = EnvelopeCodec.encode(this));
 	}
 
 	get byteLength(): number {
-		return this.cache.byteLength || (this.cache.byteLength = EnvelopeCodec.byteLength(this));
-	}
-
-	get checksum(): Uint8Array {
-		return this.cache.checksum || (this.cache.checksum = createChecksum(this.buffer));
+		return this.cache.byteLength ?? (this.cache.byteLength = EnvelopeCodec.byteLength(this));
 	}
 
 	get hash(): Uint8Array {
-		return this.cache.hash || (this.cache.hash = Envelope.hash(this));
+		return this.cache.hash ?? (this.cache.hash = Envelope.hash(this));
 	}
 
 	get publicKey(): Uint8Array {
-		return this.cache.publicKey || (this.cache.publicKey = Keys.recover(this.rSignature, this.hash));
-	}
-
-	get nodeId(): Uint8Array {
-		return this.cache.nodeId || (this.cache.nodeId = createShortHash(this.publicKey));
-	}
-
-	get nodeIdCheck(): Uint8Array {
-		return this.cache.nodeIdCheck || (this.cache.nodeIdCheck = createCheck(this.nodeId));
+		return this.cache.publicKey ?? (this.cache.publicKey = Keys.recover(this.rSignature, this.hash));
 	}
 
 	get properties(): Envelope.Properties {
@@ -194,47 +128,54 @@ export class Envelope implements Envelope.Properties {
 		};
 	}
 
-	update = updateEnvelope.bind(this, this);
+	/**
+	 * Validate envelope fields (protocol version, field lengths, cryptographic constraints)
+	 */
+	validate(): void {
+		if (this.version !== Envelope.PROTOCOL_VERSION) {
+			throw new Error(`Unsupported protocol version: ${this.version}, expected ${Envelope.PROTOCOL_VERSION}`);
+		}
+
+		if (this.keyId.byteLength !== 8) {
+			throw new Error(`Invalid keyId length: ${this.keyId.byteLength}, expected 8`);
+		}
+
+		if (this.dhPublicKey.byteLength !== 32) {
+			throw new Error(`Invalid dhPublicKey length: ${this.dhPublicKey.byteLength}, expected 32`);
+		}
+
+		for (const lowOrderPoint of LOW_ORDER_POINTS) {
+			if (compare(this.dhPublicKey, lowOrderPoint) === 0) {
+				throw new Error("Invalid X25519 public key: low-order point detected");
+			}
+		}
+
+		if (this.messageNumber < 0 || !Number.isSafeInteger(this.messageNumber)) {
+			throw new Error(`Invalid messageNumber: ${this.messageNumber}`);
+		}
+
+		if (this.previousChainLength < 0 || !Number.isSafeInteger(this.previousChainLength)) {
+			throw new Error(`Invalid previousChainLength: ${this.previousChainLength}`);
+		}
+
+		// Reasonable upper bound to catch corruption or attacks
+		if (this.previousChainLength > 1_000_000) {
+			throw new Error(`previousChainLength too large: ${this.previousChainLength}`);
+		}
+
+		if (this.kemCiphertext && this.kemCiphertext.byteLength !== MlKemCipherTextCodec.byteLength()) {
+			throw new Error(`Invalid kemCiphertext length: ${this.kemCiphertext.byteLength}, expected ${MlKemCipherTextCodec.byteLength()}`);
+		}
+	}
 
 	/**
-	 * Verifies the envelope's protocol version and signature.
-	 *
-	 * Call this method BEFORE any database lookups or processing to fail fast on invalid
-	 * envelopes and prevent database read amplification attacks. This validates the protocol
-	 * version and verifies the signature by recovering the public key and comparing the
-	 * derived nodeId with the expected remoteNodeId.
-	 *
-	 * @param remoteNodeId - Expected sender's nodeId (20 bytes) for signature verification
-	 * @throws {RatchetError} If protocol version unsupported or signature verification fails
-	 *
-	 * @example
-	 * ```typescript
-	 * const envelope = EnvelopeCodec.decode(receivedBuffer);
-	 * envelope.verify(senderNodeId); // Verify FIRST
-	 * const data = envelope.decrypt(senderNodeId, ratchetState); // Then decrypt
-	 * ```
+	 * Verify signature against expected public key
 	 */
-	verify = verifyEnvelope.bind(this, this);
+	verify(publicKey: Uint8Array): void {
+		this.validate();
 
-	/**
-	 * Decrypts and authenticates the envelope, returning the plaintext data.
-	 *
-	 * Validates the protocol version, verifies the sender's signature by comparing recovered
-	 * nodeId with expected remoteNodeId, performs DH ratchet if remote key changed, and
-	 * decrypts the message using the ratchet state.
-	 *
-	 * @param remoteNodeId - Expected sender's nodeId (20 bytes) for signature verification
-	 * @param ratchetState - Current ratchet state for the session
-	 * @returns Decrypted plaintext data
-	 * @throws {RatchetError} If protocol version unsupported, signature verification fails, or decryption fails
-	 *
-	 * @example
-	 * ```typescript
-	 * const envelope = EnvelopeCodec.decode(receivedBuffer);
-	 * const data = envelope.decrypt(senderNodeId, ratchetState);
-	 * console.log('Decrypted message:', data);
-	 * ```
-	 */
-	decrypt = decryptEnvelope.bind(this, this);
+		if (compare(this.publicKey, publicKey) !== 0) {
+			throw new Error("Signature verification failed: recovered publicKey does not match expected publicKey");
+		}
+	}
 }
-

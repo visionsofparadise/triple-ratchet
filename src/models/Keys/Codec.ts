@@ -1,4 +1,5 @@
 import { Codec } from "bufferfy";
+import { Keys } from ".";
 import { ShortHashCodec } from "../../utilities/Hash";
 
 export const SecretKeyCodec = Codec.Bytes(32);
@@ -12,3 +13,14 @@ export const RSignatureCodec = Codec.Object({
 });
 
 export type RSignature = Codec.Type<typeof RSignatureCodec>;
+
+export const KeysPropertiesCodec = Codec.Object({
+	secretKey: SecretKeyCodec,
+});
+
+export type KeysProperties = Codec.Type<typeof KeysPropertiesCodec>;
+
+export const KeysCodec = Codec.Transform(KeysPropertiesCodec, {
+	decode: (properties) => new Keys(properties),
+	encode: (keys) => keys.properties,
+});

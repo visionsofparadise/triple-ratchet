@@ -1,12 +1,10 @@
 import { hkdf } from "@noble/hashes/hkdf";
 import { sha256 } from "@noble/hashes/sha2";
-import { RatchetError } from "../Error";
+import { secureZero } from "../../utilities/SecureMemory";
+import { KeyChainCodec, type KeyChainProperties } from "./Codec";
 
 export namespace KeyChain {
-	export interface Properties {
-		chainKey?: Uint8Array;
-		messageNumber: number;
-	}
+	export interface Properties extends KeyChainProperties {}
 }
 
 export class KeyChain implements KeyChain.Properties {
@@ -27,27 +25,53 @@ export class KeyChain implements KeyChain.Properties {
 
 	constructor(properties?: Partial<KeyChain.Properties>) {
 		this.chainKey = properties?.chainKey;
-		this.messageNumber = properties?.messageNumber || 0;
+		this.messageNumber = properties?.messageNumber ?? 0;
+	}
+
+	get buffer(): Uint8Array {
+		return KeyChainCodec.encode(this);
+	}
+
+	get byteLength(): number {
+		return this.buffer.length;
+	}
+
+	get properties(): KeyChain.Properties {
+		const { chainKey, messageNumber } = this;
+
+		return { chainKey, messageNumber };
 	}
 
 	private assertChainKey(): asserts this is { chainKey: Uint8Array } {
 		if (!this.chainKey) {
-			throw new RatchetError("No chain key available");
+			throw new Error("No chain key available");
 		}
 	}
 
 	get secret(): Uint8Array {
 		this.assertChainKey();
 
-		return this._cachedSecret || (this._cachedSecret = KeyChain.deriveMessageSecret(this.chainKey));
+		return this._cachedSecret ?? (this._cachedSecret = KeyChain.deriveMessageSecret(this.chainKey));
 	}
 
 	next(): void {
 		this.assertChainKey();
 
+		if (this.messageNumber >= Number.MAX_SAFE_INTEGER) {
+			throw new Error("Message number would exceed MAX_SAFE_INTEGER");
+		}
+
+		const oldChainKey = this.chainKey;
 		this.chainKey = KeyChain.deriveChainKey(this.chainKey);
+
+		secureZero(oldChainKey);
+
+		if (this._cachedSecret) {
+			secureZero(this._cachedSecret);
+			this._cachedSecret = undefined;
+		}
+
 		this.messageNumber += 1;
-		this._cachedSecret = undefined;
 	}
 
 	reset(newChainKey: Uint8Array): void {

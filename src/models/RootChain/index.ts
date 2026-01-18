@@ -3,11 +3,10 @@ import { hkdf } from "@noble/hashes/hkdf";
 import { sha256 } from "@noble/hashes/sha2";
 import { ml_kem1024 } from "@noble/post-quantum/ml-kem.js";
 import { compare, concat } from "uint8array-tools";
-import { RatchetError } from "../Error";
 import { KeyChain } from "../KeyChain";
-import { MlKemPublicKeyCodec } from "../RatchetKeysItem/MlKemCodec";
-import { RatchetKeysPublic } from "../RatchetKeysItem/PublicCodec";
-import { RootChainCodec, RootChainProperties } from "./Codec";
+import { MlKemPublicKeyCodec } from "../RatchetKeys/MlKemCodec";
+import type { RatchetPublicKeys } from "../RatchetKeys/Public";
+import { RootChainCodec, type RootChainProperties } from "./Codec";
 
 export namespace RootChain {
 	export interface Properties extends RootChainProperties {}
@@ -51,13 +50,19 @@ export class RootChain implements RootChain.Properties {
 		return RootChainCodec.byteLength(this);
 	}
 
+	get properties(): RootChain.Properties {
+		const { rootKey, dhSecretKey, remoteDhPublicKey, sendingChain, receivingChain } = this;
+
+		return { rootKey, dhSecretKey, remoteDhPublicKey, sendingChain, receivingChain };
+	}
+
 	get dhPublicKey(): Uint8Array {
 		return x25519.getPublicKey(this.dhSecretKey);
 	}
 
 	performDhRatchet(remoteDhPublicKey: Uint8Array): void {
 		if (compare(remoteDhPublicKey, this.remoteDhPublicKey) === 0) {
-			throw new RatchetError("DH ratchet called with same remote public key");
+			throw new Error("DH ratchet called with same remote public key");
 		}
 
 		const dhSharedSecret = x25519.getSharedSecret(this.dhSecretKey, remoteDhPublicKey);
@@ -74,15 +79,15 @@ export class RootChain implements RootChain.Properties {
 		this.receivingChain = new KeyChain({ chainKey: receivingChainKey });
 	}
 
-	performMlKemRatchet(initiationKeys: RatchetKeysPublic): Uint8Array {
+	performMlKemRatchet(initiationKeys: RatchetPublicKeys): Uint8Array {
 		// Guard: validate ML-KEM public key length using codec
 		if (initiationKeys.encryptionKey.byteLength !== MlKemPublicKeyCodec.byteLength()) {
-			throw new RatchetError(`Invalid ML-KEM public key length: ${initiationKeys.encryptionKey.byteLength}, expected ${MlKemPublicKeyCodec.byteLength}`);
+			throw new Error(`Invalid ML-KEM public key length: ${initiationKeys.encryptionKey.byteLength}, expected ${String(MlKemPublicKeyCodec.byteLength)}`);
 		}
 
 		// Guard: validate DH public key length (X25519)
 		if (initiationKeys.dhPublicKey.byteLength !== 32) {
-			throw new RatchetError(`Invalid DH public key length: ${initiationKeys.dhPublicKey.byteLength}, expected 32`);
+			throw new Error(`Invalid DH public key length: ${initiationKeys.dhPublicKey.byteLength}, expected 32`);
 		}
 
 		const { cipherText, sharedSecret: mlKemSharedSecret } = ml_kem1024.encapsulate(initiationKeys.encryptionKey);

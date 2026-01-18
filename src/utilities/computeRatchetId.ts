@@ -1,8 +1,8 @@
 import { compare, concat } from "uint8array-tools";
 import { createHash } from "./Hash";
 
-export function computeRatchetId(nodeId1: Uint8Array, nodeId2: Uint8Array): Uint8Array {
-	const [first, second] = compare(nodeId1, nodeId2) < 0 ? [nodeId1, nodeId2] : [nodeId2, nodeId1];
+export function computeRatchetId(publicKeyA: Uint8Array, publicKeyB: Uint8Array): Uint8Array {
+	const [first, second] = compare(publicKeyA, publicKeyB) < 0 ? [publicKeyA, publicKeyB] : [publicKeyB, publicKeyA];
 
 	const combined = concat([first, second]);
 

@@ -1,58 +1,66 @@
 import { EventEmitter } from "events";
-import { Keys } from "../Keys/index.js";
-import { RatchetKeysItem } from "../RatchetKeysItem/index.js";
-import { RatchetStateItem } from "../RatchetStateItem/index.js";
-// import { Envelope } from "../Envelope/index.js";
-import { EnvelopeCodec } from "../Envelope/Codec.js";
-import { RatchetError } from "../Error/index.js";
-import { createShortHash } from "../../utilities/Hash.js";
-import type { RatchetKeysPublic } from "../RatchetKeysItem/PublicCodec.js";
+import { compare } from "uint8array-tools";
+import { ControlMessage } from "../ControlMessage";
+import type { Envelope } from "../Envelope";
+import type { Keys } from "../Keys";
+import { Message } from "../Message";
+import { MessageCodec } from "../Message/Codec";
+import type { RatchetKeys } from "../RatchetKeys";
+import { RatchetState } from "../RatchetState";
+import { SessionCodec, type SessionProperties } from "./Codec";
+import { ControlProtocolController } from "./ControlProtocolController";
 
-export interface SessionOptions {
-	localKeys: Keys;
-	localInitiationKeys: RatchetKeysItem;
-	remoteNodeId: Uint8Array;
-	remoteInitiationKeys?: RatchetKeysPublic;
-	state?: RatchetStateItem;
-}
+export namespace Session {
+	export interface Properties extends SessionProperties {}
 
-export interface SessionEvents {
-	/** Emitted when a buffer needs to be sent to the remote peer */
-	send: (buffer: Uint8Array) => void;
-
-	/** Emitted when a data message is decrypted */
-	message: (data: Uint8Array) => void;
-
-	/** Emitted when session state changes (for persistence) */
-	stateChanged: () => void;
-
-	/** Emitted on errors */
-	error: (error: Error) => void;
-}
-
-export declare interface Session {
-	on<K extends keyof SessionEvents>(event: K, listener: SessionEvents[K]): this;
-	emit<K extends keyof SessionEvents>(event: K, ...args: Parameters<SessionEvents[K]>): boolean;
+	export interface EventMap {
+		send: [buffer: Uint8Array];
+		message: [data: Uint8Array];
+		stateChanged: [];
+		error: [error: unknown];
+	}
 }
 
 /**
  * Session manages encrypted communication with a single peer
  */
-export class Session extends EventEmitter {
-	private localKeys: Keys;
-	private localInitiationKeys: RatchetKeysItem;
-	private remoteNodeId: Uint8Array;
-	private ratchetState?: RatchetStateItem;
-	private remoteInitiationKeys?: RatchetKeysPublic;
+export class Session implements Session.Properties {
+	events: EventEmitter<Session.EventMap>;
 
-	constructor(options: SessionOptions) {
-		super();
+	localKeys: Keys;
+	localInitiationKeys?: RatchetKeys;
+	remotePublicKey: Uint8Array;
+	ratchetState?: RatchetState;
 
-		this.localKeys = options.localKeys;
-		this.localInitiationKeys = options.localInitiationKeys;
-		this.remoteNodeId = options.remoteNodeId;
-		this.ratchetState = options.state;
-		this.remoteInitiationKeys = options.remoteInitiationKeys;
+	private controller: ControlProtocolController;
+
+	constructor(properties: Session.Properties) {
+		this.events = new EventEmitter();
+
+		this.localKeys = properties.localKeys;
+		this.localInitiationKeys = properties.localInitiationKeys;
+		this.remotePublicKey = properties.remotePublicKey;
+		this.ratchetState = properties.ratchetState;
+
+		this.controller = new ControlProtocolController(this.localKeys);
+
+		// Forward controller events
+		this.controller.events.on("send", (buffer) => this.events.emit("send", buffer));
+		this.controller.events.on("error", (error) => this.events.emit("error", error));
+	}
+
+	get buffer(): Uint8Array {
+		return SessionCodec.encode(this);
+	}
+
+	get byteLength(): number {
+		return SessionCodec.byteLength(this);
+	}
+
+	get properties(): Session.Properties {
+		const { localKeys, localInitiationKeys, remotePublicKey, ratchetState } = this;
+
+		return { localKeys, localInitiationKeys, remotePublicKey, ratchetState };
 	}
 
 	/**
@@ -60,83 +68,93 @@ export class Session extends EventEmitter {
 	 */
 	async send(data: Uint8Array): Promise<void> {
 		try {
-			if (!this.remoteInitiationKeys) {
-				throw new RatchetError("Remote initiation keys not set - must be provided out of band");
-			}
-
-			// Initialize session as initiator if needed
 			if (!this.ratchetState) {
-				const result = RatchetStateItem.initializeAsInitiator(
-					this.localKeys.nodeId,
-					this.remoteNodeId,
-					this.remoteInitiationKeys,
-					data,
-					this.localKeys
-				);
+				const remoteInitiationKeys = await this.controller.getInitiationKeys();
+
+				const result = RatchetState.initializeAsInitiator(this.localKeys.publicKey, this.remotePublicKey, remoteInitiationKeys, data, this.localKeys);
 
 				this.ratchetState = result.ratchetState;
-				this.emit("send", result.envelope.buffer);
-				this.emit("stateChanged");
+
+				const message = new Message({ body: result.envelope });
+				this.events.emit("send", message.buffer);
+				this.events.emit("stateChanged");
 				return;
 			}
 
-			// Encrypt and send
-			const envelope = this.ratchetState.encryptMessage(data, this.localKeys);
+			const envelope = this.ratchetState.encrypt(data, this.localKeys);
 
-			this.emit("send", envelope.buffer);
-			this.emit("stateChanged");
+			const message = new Message({ body: envelope });
+			this.events.emit("send", message.buffer);
+			this.events.emit("stateChanged");
 		} catch (error) {
-			this.emit("error", error instanceof Error ? error : new Error(String(error)));
+			this.events.emit("error", error instanceof Error ? error : new Error(String(error)));
 		}
 	}
 
 	/**
-	 * Receive and process envelope from peer
+	 * Receive and process message from peer (ControlMessage or Envelope)
 	 */
 	receive(buffer: Uint8Array): void {
 		try {
-			const envelope = EnvelopeCodec.decode(buffer);
+			const message = MessageCodec.decode(buffer);
 
-			// Verify envelope signature
-			const recoveredPublicKey = Keys.recover(envelope.rSignature, envelope.hash);
-			const recoveredNodeId = createShortHash(recoveredPublicKey);
-
-			if (!recoveredNodeId.every((byte, i) => byte === this.remoteNodeId[i])) {
-				throw new RatchetError("Invalid envelope signature");
+			if (compare(message.body.publicKey, this.remotePublicKey) !== 0) {
+				throw new Error("Invalid control message signature");
 			}
 
-			// Initialize session as responder if needed
-			if (!this.ratchetState) {
-				this.ratchetState = RatchetStateItem.initializeAsResponder(
-					envelope,
-					this.localKeys.nodeId,
-					this.localInitiationKeys,
-					this.remoteNodeId
-				);
+			// Handle ControlMessage
+			if (message.body instanceof ControlMessage) {
+				const controlMessage = message.body;
+
+				this.handleControlMessage(controlMessage);
+			} else {
+				const envelope = message.body;
+
+				this.handleEnvelope(envelope);
 			}
-
-			// Decrypt
-			const data = this.ratchetState.decryptMessage(envelope);
-
-			this.emit("message", data);
-			this.emit("stateChanged");
 		} catch (error) {
-			this.emit("error", error instanceof Error ? error : new Error(String(error)));
+			this.events.emit("error", error instanceof Error ? error : new Error(String(error)));
 		}
 	}
 
 	/**
-	 * Get current ratchet state for persistence
+	 * Handle incoming control messages
 	 */
-	getState(): RatchetStateItem | undefined {
-		return this.ratchetState;
+	private handleControlMessage(controlMessage: ControlMessage): void {
+		const localInitiationKeys = this.controller.handleControlMessage(controlMessage);
+
+		if (localInitiationKeys) {
+			this.localInitiationKeys = localInitiationKeys;
+		}
 	}
 
 	/**
-	 * Set remote initiation keys (must be exchanged out of band)
+	 * Close the session and cleanup resources
 	 */
-	setRemoteInitiationKeys(keys: RatchetKeysPublic): void {
-		this.remoteInitiationKeys = keys;
-		this.emit("stateChanged");
+	close(): void {
+		this.controller.events.removeAllListeners();
+		this.controller.close();
+		this.events.removeAllListeners();
+	}
+
+	/**
+	 * Handle incoming envelopes
+	 */
+	private handleEnvelope(envelope: Envelope): void {
+		if (!this.ratchetState) {
+			if (!this.localInitiationKeys) {
+				throw new Error("Cannot initialize ratchet as responder without local initiation keys");
+			}
+
+			this.ratchetState = RatchetState.initializeAsResponder(envelope, this.localKeys.publicKey, this.localInitiationKeys, this.remotePublicKey);
+
+			// Delete local initiation keys after ratchet initialized
+			delete this.localInitiationKeys;
+		}
+
+		const data = this.ratchetState.decrypt(envelope);
+
+		this.events.emit("message", data);
+		this.events.emit("stateChanged");
 	}
 }

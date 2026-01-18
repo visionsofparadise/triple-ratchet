@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { KeyChain } from "./index.js";
+import { KeyChain } from "./index";
 
 describe("KeyChain.deriveChainKey", () => {
 	it("should produce 32-byte chain key", () => {

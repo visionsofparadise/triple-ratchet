@@ -2,9 +2,9 @@ import { Codec } from "bufferfy";
 import { Envelope } from ".";
 import { CipherDataCodec } from "../CipherData/Codec";
 import { RSignatureCodec } from "../Keys/Codec";
-import { KeyIdCodec } from "../RatchetKeysItem/KeyIdCodec";
-import { MlKemCipherTextCodec } from "../RatchetKeysItem/MlKemCodec";
-import { X25519PublicKeyCodec } from "../RatchetKeysItem/X25519Codec";
+import { KeyIdCodec } from "../RatchetKeys/KeyIdCodec";
+import { MlKemCipherTextCodec } from "../RatchetKeys/MlKemCodec";
+import { X25519PublicKeyCodec } from "../RatchetKeys/X25519Codec";
 
 export const EnvelopePropertiesCodec = Codec.Object({
 	version: Codec.UInt(8),
