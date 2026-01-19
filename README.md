@@ -33,7 +33,7 @@ npm install @xkore/triple-ratchet
 ## Quick Start
 
 ```typescript
-import { Session, Keys, RatchetKeys } from '@xkore/triple-ratchet';
+import { Session, Keys, RatchetKeys } from "@xkore/triple-ratchet";
 
 // Setup local keys
 const localKeys = new Keys();
@@ -44,98 +44,104 @@ const remoteInitiationKeys = remoteInitiationKeysFromSomewhere;
 
 // Create session
 const session = new Session({
-  localKeys,
-  localInitiationKeys,
-  remoteNodeId: remoteKeys.nodeId,
-  remoteInitiationKeys
+	localKeys,
+	localInitiationKeys,
+	remoteNodeId: remoteKeys.nodeId,
+	remoteInitiationKeys,
 });
 
 // Handle outgoing buffers
-session.on('send', (buffer) => {
-  myTransport.send(remoteAddress, buffer);
+session.on("send", (buffer) => {
+	myTransport.send(remoteAddress, buffer);
 });
 
 // Handle incoming decrypted messages
-session.on('message', (data) => {
-  console.log('Received:', data);
+session.on("message", (data) => {
+	console.log("Received:", data);
 });
 
 // Handle state changes (for persistence)
-session.on('stateChanged', () => {
-  db.put(remoteNodeId, session.getState());
+session.on("stateChanged", () => {
+	db.put(remoteNodeId, session.getState());
 });
 
 // Send encrypted data
-await session.send(new TextEncoder().encode('hello'));
+await session.send(new TextEncoder().encode("hello"));
 
 // Receive from transport
-myTransport.on('message', (buffer) => {
-  session.receive(buffer);
+myTransport.on("message", (buffer) => {
+	session.receive(buffer);
 });
 ```
 
+After initial key exchange, the session handles all cryptographic state updates automatically. The `stateChanged` event fires after each `send()` or `receive()` so you can persist the updated state.
+
 ## Key Exchange
 
-Initiation keys must be exchanged out-of-band. Example using HTTP:
+The initiator must fetch the responder's initiation keys before the first message. This is a one-time, one-way exchange—once the session is established, key rotation happens automatically via the ratchet protocol.
 
 ```typescript
-// Publish your keys
-app.get('/initiation-keys', (req, res) => {
-  res.json({
-    keyId: Array.from(localInitiationKeys.keyId),
-    encryptionKey: Array.from(localInitiationKeys.encryptionKey),
-    dhPublicKey: Array.from(localInitiationKeys.dhPublicKey)
-  });
+import { RatchetPublicKeys } from "@xkore/triple-ratchet";
+
+// Publish your keys (responder)
+app.get("/initiation-keys", (req, res) => {
+	res.json(localInitiationKeys.publicKeys.toJson());
 });
 
-// Fetch remote peer's keys
+// Fetch remote peer's keys (initiator)
 const response = await fetch(`https://peer.example.com/initiation-keys`);
-const remoteKeys = await response.json();
+const remoteKeys = RatchetPublicKeys.fromJson(await response.json());
 
 const session = new Session({
-  localKeys,
-  localInitiationKeys,
-  remoteNodeId,
-  remoteInitiationKeys: {
-    keyId: new Uint8Array(remoteKeys.keyId),
-    encryptionKey: new Uint8Array(remoteKeys.encryptionKey),
-    dhPublicKey: new Uint8Array(remoteKeys.dhPublicKey)
-  }
+	localKeys,
+	localInitiationKeys,
+	remotePublicKey,
+	remoteInitiationKeys: remoteKeys,
 });
 ```
 
 ## Session Persistence
 
-Sessions can be serialized and restored:
+Sessions can be serialized and restored using either JSON or binary formats:
+
+### Using JSON
 
 ```typescript
-// Save session state
-const state = session.getState();
-await db.put(remoteNodeId, JSON.stringify({
-  ratchetState: state ? {
-    ratchetId: Array.from(state.ratchetId),
-    remoteKeyId: state.remoteKeyId ? Array.from(state.remoteKeyId) : undefined,
-    rootChain: state.rootChain, // Complex object, handle serialization
-    previousChainLength: state.previousChainLength,
-    skippedKeys: state.skippedKeys,
-    ratchetAt: state.ratchetAt
-  } : undefined
-}));
+import { RatchetState } from "@xkore/triple-ratchet";
 
-// Restore session
-const savedState = JSON.parse(await db.get(remoteNodeId));
-const restoredState = savedState ? RatchetState.fromBuffer(
-  new Uint8Array(savedState.ratchetId),
-  serializeStateToBuffer(savedState) // Implement serialization
-) : undefined;
+// Save state as JSON
+session.events.on("stateChanged", async () => {
+	const state = session.ratchetState;
 
-const session = new Session({
-  localKeys,
-  localInitiationKeys,
-  remoteNodeId,
-  remoteInitiationKeys,
-  state: restoredState
+	if (state) {
+		await db.put(remoteNodeId, JSON.stringify(state.toJson()));
+	}
 });
+
+// Restore from JSON
+const savedJson = await db.get(remoteNodeId);
+const ratchetState = savedJson ? RatchetState.fromJson(JSON.parse(savedJson)) : undefined;
+
+const session = new Session({ localKeys, localInitiationKeys, remotePublicKey, ratchetState });
+```
+
+### Using Binary
+
+```typescript
+// Save state as binary (more compact)
+session.events.on("stateChanged", async () => {
+	const state = session.ratchetState;
+
+	if (state) {
+		await db.put(remoteNodeId, state.buffer);
+	}
+});
+
+// Restore from binary
+const savedBuffer = await db.get(remoteNodeId);
+const ratchetState = savedBuffer ? RatchetState.fromBuffer(savedBuffer) : undefined;
+
+const session = new Session({ localKeys, localInitiationKeys, remotePublicKey, ratchetState });
 ```
 
 ## Transport Integration
@@ -143,31 +149,37 @@ const session = new Session({
 ### WebSocket Example
 
 ```typescript
-const ws = new WebSocket('wss://peer.example.com');
+const ws = new WebSocket("wss://peer.example.com");
 
-session.on('send', (buffer) => {
-  ws.send(buffer);
+session.events.on("send", (buffer) => {
+	ws.send(buffer);
 });
 
-ws.on('message', (data) => {
-  session.receive(new Uint8Array(data));
-});
+ws.onmessage = (event) => {
+	session.receive(new Uint8Array(event.data));
+};
+
+// Send a message
+await session.send(new TextEncoder().encode("Hello over WebSocket!"));
 ```
 
 ### UDP Example
 
 ```typescript
-import dgram from 'dgram';
+import dgram from "dgram";
 
-const socket = dgram.createSocket('udp4');
+const socket = dgram.createSocket("udp4");
 
-session.on('send', (buffer) => {
-  socket.send(buffer, remotePort, remoteHost);
+session.events.on("send", (buffer) => {
+	socket.send(buffer, remotePort, remoteHost);
 });
 
-socket.on('message', (buffer) => {
-  session.receive(buffer);
+socket.on("message", (buffer) => {
+	session.receive(buffer);
 });
+
+// Send a message
+await session.send(new TextEncoder().encode("Hello over UDP!"));
 ```
 
 ## Security Properties
@@ -180,13 +192,26 @@ socket.on('message', (buffer) => {
 
 ## Configuration
 
-Session can be configured via constructor options:
+Session accepts optional configuration for ratchet bounds and limits:
 
 ```typescript
-// Coming in future version - currently uses defaults:
-// - messageBound: 100 messages before rotation
-// - timeBound: 3600000ms (1 hour) before rotation
-// - maxSkippedKeys: 1000 maximum message gap
+const session = new Session(
+	{
+		localKeys,
+		localInitiationKeys,
+		remotePublicKey,
+	},
+	{
+		// ML-KEM rotation triggers
+		messageBound: 100, // Rotate after 100 messages (default)
+		timeBound: 3600000, // Rotate after 1 hour in ms (default)
+
+		// Out-of-order message handling
+		maxMessageSkip: 1000, // Max gap before rejection (default)
+		maxStoredSkippedKeys: 2000, // Max stored skipped keys (default)
+		skippedKeyMaxAge: 86400000, // Prune skipped keys after 24h (default)
+	},
+);
 ```
 
 ## API Reference
@@ -196,6 +221,7 @@ Session can be configured via constructor options:
 ```typescript
 class Session {
   constructor(options: SessionOptions)
+
   send(data: Uint8Array): Promise<void>
   receive(buffer: Uint8Array): void
   getState(): RatchetState | undefined
@@ -213,12 +239,14 @@ class Session {
 
 ```typescript
 class Keys {
-  constructor(properties?: { secretKey?: Uint8Array })
-  readonly secretKey: Uint8Array
-  readonly publicKey: Uint8Array
-  readonly nodeId: Uint8Array
-  rSign(message: Uint8Array): RSignature
-  static recover(signature: RSignature, message: Uint8Array): Uint8Array
+	constructor(properties?: { secretKey?: Uint8Array });
+
+	readonly secretKey: Uint8Array;
+	readonly publicKey: Uint8Array;
+	readonly nodeId: Uint8Array;
+
+	rSign(message: Uint8Array): RSignature;
+	static recover(signature: RSignature, message: Uint8Array): Uint8Array;
 }
 ```
 
@@ -226,14 +254,16 @@ class Keys {
 
 ```typescript
 class RatchetKeys {
-  constructor(properties?: { dhSecretKey?: Uint8Array; mlKemSeed?: Uint8Array })
-  readonly keyId: Uint8Array
-  readonly encryptionKey: Uint8Array
-  readonly decryptionKey: Uint8Array
-  readonly dhPublicKey: Uint8Array
-  get publicKeys(): RatchetPublicKeys
-  toPublicBuffer(): Uint8Array
-  static fromPublicBuffer(buffer: Uint8Array): RatchetPublicKeys
+	constructor(properties?: { dhSecretKey?: Uint8Array; mlKemSeed?: Uint8Array });
+
+	readonly keyId: Uint8Array;
+	readonly encryptionKey: Uint8Array;
+	readonly decryptionKey: Uint8Array;
+	readonly dhPublicKey: Uint8Array;
+
+	get publicKeys(): RatchetPublicKeys;
+	toPublicBuffer(): Uint8Array;
+	static fromPublicBuffer(buffer: Uint8Array): RatchetPublicKeys;
 }
 ```
 
@@ -252,13 +282,13 @@ Session (event-based communication)
 
 ## Comparison to Signal Protocol
 
-| Feature | Signal | @xkore/triple-ratchet |
-|---------|--------|----------------------|
-| Quantum resistance | SPQR (optional) | ML-KEM-1024 (always) |
-| Transport | Centralized server | Any transport |
-| Key exchange | X3DH | Out-of-band |
-| Rotation bounds | None | Enforced (100 msg/1h) |
-| Use case | Mobile messaging | P2P applications |
+| Feature            | Signal             | @xkore/triple-ratchet |
+| ------------------ | ------------------ | --------------------- |
+| Quantum resistance | SPQR (optional)    | ML-KEM-1024 (always)  |
+| Transport          | Centralized server | Any transport         |
+| Key exchange       | X3DH               | Out-of-band           |
+| Rotation bounds    | None               | Enforced (100 msg/1h) |
+| Use case           | Mobile messaging   | P2P applications      |
 
 ## License
 

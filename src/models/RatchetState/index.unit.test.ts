@@ -1,4 +1,4 @@
-import { x25519 } from "@noble/curves/ed25519";
+import { x25519 } from "@noble/curves/ed25519.js";
 import { compare } from "uint8array-tools";
 import { describe, expect, it } from "vitest";
 import { computeRatchetId } from "../../utilities/computeRatchetId";

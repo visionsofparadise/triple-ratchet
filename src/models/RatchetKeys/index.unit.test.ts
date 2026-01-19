@@ -1,4 +1,4 @@
-import { x25519 } from "@noble/curves/ed25519";
+import { x25519 } from "@noble/curves/ed25519.js";
 import { ml_kem1024 } from "@noble/post-quantum/ml-kem.js";
 import { compare } from "uint8array-tools";
 import { describe, expect, it } from "vitest";

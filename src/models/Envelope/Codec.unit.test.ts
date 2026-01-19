@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { x25519 } from "@noble/curves/ed25519";
+import { x25519 } from "@noble/curves/ed25519.js";
 import { CipherData } from "../CipherData/index";
 import { Keys } from "../Keys/index";
 import { Envelope } from "./index";
@@ -13,7 +13,7 @@ describe("Envelope serialization", () => {
 
 		const envelope = new Envelope({
 			keyId: crypto.getRandomValues(new Uint8Array(8)),
-			dhPublicKey: x25519.getPublicKey(x25519.utils.randomPrivateKey()),
+			dhPublicKey: x25519.getPublicKey(x25519.utils.randomSecretKey()),
 			messageNumber: 42,
 			previousChainLength: 10,
 			cipherData,
@@ -41,7 +41,7 @@ describe("Envelope serialization", () => {
 
 		const envelope = new Envelope({
 			keyId: crypto.getRandomValues(new Uint8Array(8)),
-			dhPublicKey: x25519.getPublicKey(x25519.utils.randomPrivateKey()),
+			dhPublicKey: x25519.getPublicKey(x25519.utils.randomSecretKey()),
 			messageNumber: 0,
 			previousChainLength: 0,
 			kemCiphertext,
@@ -62,7 +62,7 @@ describe("Envelope serialization", () => {
 
 		const envelope = new Envelope({
 			keyId: crypto.getRandomValues(new Uint8Array(8)),
-			dhPublicKey: x25519.getPublicKey(x25519.utils.randomPrivateKey()),
+			dhPublicKey: x25519.getPublicKey(x25519.utils.randomSecretKey()),
 			messageNumber: 0,
 			previousChainLength: 0,
 			cipherData,
@@ -83,7 +83,7 @@ describe("Envelope serialization", () => {
 		const envelope = Envelope.create(
 			{
 				keyId: crypto.getRandomValues(new Uint8Array(8)),
-				dhPublicKey: x25519.getPublicKey(x25519.utils.randomPrivateKey()),
+				dhPublicKey: x25519.getPublicKey(x25519.utils.randomSecretKey()),
 				messageNumber: 0,
 				previousChainLength: 0,
 				cipherData,
@@ -102,7 +102,7 @@ describe("Envelope serialization", () => {
 
 		const envelope = new Envelope({
 			keyId: crypto.getRandomValues(new Uint8Array(8)),
-			dhPublicKey: x25519.getPublicKey(x25519.utils.randomPrivateKey()),
+			dhPublicKey: x25519.getPublicKey(x25519.utils.randomSecretKey()),
 			messageNumber: 0,
 			previousChainLength: 0,
 			cipherData,

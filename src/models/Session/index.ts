@@ -13,6 +13,8 @@ import { ControlProtocolController } from "./ControlProtocolController";
 export namespace Session {
 	export interface Properties extends SessionProperties {}
 
+	export interface Options extends RatchetState.Options {}
+
 	export interface EventMap {
 		send: [buffer: Uint8Array];
 		message: [data: Uint8Array];
@@ -33,9 +35,11 @@ export class Session implements Session.Properties {
 	ratchetState?: RatchetState;
 
 	private controller: ControlProtocolController;
+	private readonly options: Session.Options;
 
-	constructor(properties: Session.Properties) {
+	constructor(properties: Session.Properties, options: Session.Options = {}) {
 		this.events = new EventEmitter();
+		this.options = options;
 
 		this.localKeys = properties.localKeys;
 		this.localInitiationKeys = properties.localInitiationKeys;
@@ -71,7 +75,7 @@ export class Session implements Session.Properties {
 			if (!this.ratchetState) {
 				const remoteInitiationKeys = await this.controller.getInitiationKeys();
 
-				const result = RatchetState.initializeAsInitiator(this.localKeys.publicKey, this.remotePublicKey, remoteInitiationKeys, data, this.localKeys);
+				const result = RatchetState.initializeAsInitiator(this.localKeys.publicKey, this.remotePublicKey, remoteInitiationKeys, data, this.localKeys, this.options);
 
 				this.ratchetState = result.ratchetState;
 
@@ -146,7 +150,7 @@ export class Session implements Session.Properties {
 				throw new Error("Cannot initialize ratchet as responder without local initiation keys");
 			}
 
-			this.ratchetState = RatchetState.initializeAsResponder(envelope, this.localKeys.publicKey, this.localInitiationKeys, this.remotePublicKey);
+			this.ratchetState = RatchetState.initializeAsResponder(envelope, this.localKeys.publicKey, this.localInitiationKeys, this.remotePublicKey, this.options);
 
 			// Delete local initiation keys after ratchet initialized
 			delete this.localInitiationKeys;

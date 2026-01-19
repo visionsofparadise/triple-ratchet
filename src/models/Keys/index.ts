@@ -1,4 +1,4 @@
-import { secp256k1 } from "@noble/curves/secp256k1";
+import { secp256k1 } from "@noble/curves/secp256k1.js";
 import { KeysCodec, type KeysProperties, type RSignature } from "./Codec";
 
 export namespace Keys {
@@ -39,10 +39,9 @@ export class Keys implements Keys.Properties {
 	}
 
 	static recover(rSignature: RSignature, message: Uint8Array): Uint8Array {
-		const signature = secp256k1.Signature.fromBytes(rSignature.signature, "compact").addRecoveryBit(rSignature.recoveryBit);
+		const sig = secp256k1.Signature.fromBytes(rSignature.signature, "compact").addRecoveryBit(rSignature.recoveryBit);
 
-		// eslint-disable-next-line @typescript-eslint/no-deprecated -- standalone recoverPublicKey not available on secp256k1
-		return signature.recoverPublicKey(message).toRawBytes(true);
+		return secp256k1.recoverPublicKey(sig.toBytes("recovered"), message, { prehash: false });
 	}
 
 	readonly secretKey: Uint8Array;
@@ -68,16 +67,20 @@ export class Keys implements Keys.Properties {
 	}
 
 	rSign(message: Uint8Array): RSignature {
-		const signature = secp256k1.sign(message, this.secretKey, { prehash: false, format: "compact" });
-		const recoveryBit = signature.recovery;
+		const recoveredSig = secp256k1.sign(message, this.secretKey, { prehash: false, format: "recovered" });
+		const sig = secp256k1.Signature.fromBytes(recoveredSig, "recovered");
+
+		if (sig.recovery === undefined) {
+			throw new Error("Failed to extract recovery bit from signature");
+		}
 
 		return {
-			recoveryBit,
-			signature: signature.toBytes(),
+			recoveryBit: sig.recovery,
+			signature: sig.toBytes("compact"),
 		};
 	}
 
 	sign(message: Uint8Array): Uint8Array {
-		return secp256k1.sign(message, this.secretKey, { prehash: false, format: "compact" }).toBytes();
+		return secp256k1.sign(message, this.secretKey, { prehash: false, format: "compact" });
 	}
 }

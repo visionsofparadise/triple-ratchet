@@ -1,4 +1,4 @@
-import { secp256k1 } from "@noble/curves/secp256k1";
+import { secp256k1 } from "@noble/curves/secp256k1.js";
 import { compare } from "uint8array-tools";
 import { describe, expect, it } from "vitest";
 import { Keys } from "./index";
@@ -13,14 +13,14 @@ describe("Keys", () => {
 		});
 
 		it("should use provided secretKey", () => {
-			const secretKey = secp256k1.utils.randomPrivateKey();
+			const secretKey = secp256k1.utils.randomSecretKey();
 			const keys = new Keys({ secretKey });
 
 			expect(compare(keys.secretKey, secretKey)).toBe(0);
 		});
 
 		it("should derive correct publicKey from secretKey", () => {
-			const secretKey = secp256k1.utils.randomPrivateKey();
+			const secretKey = secp256k1.utils.randomSecretKey();
 			const expectedPublicKey = secp256k1.getPublicKey(secretKey, true);
 			const keys = new Keys({ secretKey });
 

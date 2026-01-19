@@ -1,4 +1,4 @@
-import { x25519 } from "@noble/curves/ed25519";
+import { x25519 } from "@noble/curves/ed25519.js";
 import { ml_kem1024 } from "@noble/post-quantum/ml-kem.js";
 import { compare } from "uint8array-tools";
 import { computeRatchetId } from "../../utilities/computeRatchetId";
@@ -23,6 +23,34 @@ export namespace RatchetState {
 		maxStoredSkippedKeys?: number;
 		skippedKeyMaxAge?: number;
 	}
+
+	export interface KeyChainJson {
+		chainKey?: Array<number>;
+		messageNumber: number;
+	}
+
+	export interface RootChainJson {
+		rootKey: Array<number>;
+		dhSecretKey: Array<number>;
+		remoteDhPublicKey: Array<number>;
+		sendingChain: KeyChainJson;
+		receivingChain: KeyChainJson;
+	}
+
+	export interface SkippedKeyJson {
+		messageNumber: number;
+		secret: Array<number>;
+		createdAt: number;
+	}
+
+	export interface Json {
+		ratchetId: Array<number>;
+		remoteKeyId?: Array<number>;
+		rootChain: RootChainJson;
+		previousChainLength: number;
+		skippedKeys: Array<SkippedKeyJson>;
+		ratchetAt: number;
+	}
 }
 
 export class RatchetState implements RatchetState.Properties {
@@ -32,12 +60,51 @@ export class RatchetState implements RatchetState.Properties {
 	static MAX_STORED_SKIPPED_KEYS = 2000;
 	static SKIPPED_KEY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
+	static fromBuffer(buffer: Uint8Array, options?: RatchetState.Options): RatchetState {
+		const decoded = RatchetStateCodec.decode(buffer);
+
+		return new RatchetState(decoded.properties, options);
+	}
+
+	static fromJson(json: RatchetState.Json, options?: RatchetState.Options): RatchetState {
+		const rootChain = new RootChain({
+			rootKey: new Uint8Array(json.rootChain.rootKey),
+			dhSecretKey: new Uint8Array(json.rootChain.dhSecretKey),
+			remoteDhPublicKey: new Uint8Array(json.rootChain.remoteDhPublicKey),
+			sendingChain: new KeyChain({
+				chainKey: json.rootChain.sendingChain.chainKey ? new Uint8Array(json.rootChain.sendingChain.chainKey) : undefined,
+				messageNumber: json.rootChain.sendingChain.messageNumber,
+			}),
+			receivingChain: new KeyChain({
+				chainKey: json.rootChain.receivingChain.chainKey ? new Uint8Array(json.rootChain.receivingChain.chainKey) : undefined,
+				messageNumber: json.rootChain.receivingChain.messageNumber,
+			}),
+		});
+
+		return new RatchetState(
+			{
+				ratchetId: new Uint8Array(json.ratchetId),
+				remoteKeyId: json.remoteKeyId ? new Uint8Array(json.remoteKeyId) : undefined,
+				rootChain,
+				previousChainLength: json.previousChainLength,
+				skippedKeys: json.skippedKeys.map((sk) => ({
+					messageNumber: sk.messageNumber,
+					secret: new Uint8Array(sk.secret),
+					createdAt: sk.createdAt,
+				})),
+				ratchetAt: json.ratchetAt,
+			},
+			options,
+		);
+	}
+
 	static initializeAsInitiator(
 		localPublicKey: Uint8Array,
 		remotePublicKey: Uint8Array,
 		remoteInitiationKeys: RatchetPublicKeys,
 		data: Uint8Array,
 		keys: Keys,
+		options?: RatchetState.Options,
 	): {
 		ratchetState: RatchetState;
 		envelope: Envelope;
@@ -67,14 +134,17 @@ export class RatchetState implements RatchetState.Properties {
 			receivingChain: new KeyChain(),
 		});
 
-		const ratchetState = new RatchetState({
-			ratchetId,
-			remoteKeyId: remoteInitiationKeys.keyId,
-			rootChain,
-			previousChainLength: 0,
-			skippedKeys: [],
-			ratchetAt: Date.now(),
-		});
+		const ratchetState = new RatchetState(
+			{
+				ratchetId,
+				remoteKeyId: remoteInitiationKeys.keyId,
+				rootChain,
+				previousChainLength: 0,
+				skippedKeys: [],
+				ratchetAt: Date.now(),
+			},
+			options,
+		);
 
 		const envelope = Envelope.create(
 			{
@@ -92,7 +162,13 @@ export class RatchetState implements RatchetState.Properties {
 		return { ratchetState, envelope };
 	}
 
-	static initializeAsResponder(envelope: Envelope, localPublicKey: Uint8Array, localRatchetKeys: RatchetKeys, remotePublicKey: Uint8Array): RatchetState {
+	static initializeAsResponder(
+		envelope: Envelope,
+		localPublicKey: Uint8Array,
+		localRatchetKeys: RatchetKeys,
+		remotePublicKey: Uint8Array,
+		options?: RatchetState.Options,
+	): RatchetState {
 		if (!envelope.kemCiphertext) {
 			throw new Error("kemCiphertext required for ratchet initialization");
 		}
@@ -122,13 +198,16 @@ export class RatchetState implements RatchetState.Properties {
 			receivingChain: new KeyChain({ chainKey: receivingChainKey }),
 		});
 
-		const ratchetState = new RatchetState({
-			ratchetId,
-			rootChain,
-			previousChainLength: 0,
-			skippedKeys: [],
-			ratchetAt: Date.now(),
-		});
+		const ratchetState = new RatchetState(
+			{
+				ratchetId,
+				rootChain,
+				previousChainLength: 0,
+				skippedKeys: [],
+				ratchetAt: Date.now(),
+			},
+			options,
+		);
 
 		return ratchetState;
 	}
@@ -177,6 +256,33 @@ export class RatchetState implements RatchetState.Properties {
 		this.maxMessageSkip = options.maxMessageSkip ?? RatchetState.MAX_MESSAGE_SKIP;
 		this.maxStoredSkippedKeys = options.maxStoredSkippedKeys ?? RatchetState.MAX_STORED_SKIPPED_KEYS;
 		this.skippedKeyMaxAge = options.skippedKeyMaxAge ?? RatchetState.SKIPPED_KEY_MAX_AGE_MS;
+	}
+
+	toJson(): RatchetState.Json {
+		return {
+			ratchetId: Array.from(this.ratchetId),
+			remoteKeyId: this.remoteKeyId ? Array.from(this.remoteKeyId) : undefined,
+			rootChain: {
+				rootKey: Array.from(this.rootChain.rootKey),
+				dhSecretKey: Array.from(this.rootChain.dhSecretKey),
+				remoteDhPublicKey: Array.from(this.rootChain.remoteDhPublicKey),
+				sendingChain: {
+					chainKey: this.rootChain.sendingChain.chainKey ? Array.from(this.rootChain.sendingChain.chainKey) : undefined,
+					messageNumber: this.rootChain.sendingChain.messageNumber,
+				},
+				receivingChain: {
+					chainKey: this.rootChain.receivingChain.chainKey ? Array.from(this.rootChain.receivingChain.chainKey) : undefined,
+					messageNumber: this.rootChain.receivingChain.messageNumber,
+				},
+			},
+			previousChainLength: this.previousChainLength,
+			skippedKeys: this.skippedKeys.map((sk) => ({
+				messageNumber: sk.messageNumber,
+				secret: Array.from(sk.secret),
+				createdAt: sk.createdAt,
+			})),
+			ratchetAt: this.ratchetAt,
+		};
 	}
 
 	get buffer(): Uint8Array {
