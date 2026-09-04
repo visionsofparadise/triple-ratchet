@@ -1,7 +1,7 @@
 import { MAGIC_BYTES } from "../../utilities/magicBytes";
+import { MessageCodec, type MessageProperties, VERSION } from "./Codec";
 import type { ControlMessage } from "../ControlMessage";
 import type { Envelope } from "../Envelope";
-import { MessageCodec, type MessageProperties, VERSION } from "./Codec";
 
 export namespace Message {
 	export interface Properties extends MessageProperties {}

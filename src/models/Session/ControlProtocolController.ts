@@ -1,12 +1,12 @@
-import { hex } from "@scure/base";
 import { EventEmitter } from "events";
+import { hex } from "@scure/base";
 import { ControlMessage } from "../ControlMessage";
 import { ControlMessageBodyType } from "../ControlMessage/BodyCodec";
-import type { Keys } from "../Keys";
 import { Message } from "../Message";
 import { RatchetKeys } from "../RatchetKeys";
-import type { RatchetPublicKeys } from "../RatchetKeys/Public";
 import { createTransactionId } from "../TransactionId/Codec";
+import type { Keys } from "../Keys";
+import type { RatchetPublicKeys } from "../RatchetKeys/Public";
 
 export namespace ControlProtocolController {
 	export interface EventMap {
@@ -61,6 +61,7 @@ export class ControlProtocolController {
 			);
 
 			const message = new Message({ body });
+
 			this.events.emit("send", message.buffer);
 		});
 	}
@@ -86,6 +87,7 @@ export class ControlProtocolController {
 				);
 
 				const message = new Message({ body });
+
 				this.events.emit("send", message.buffer);
 
 				return localInitiationKeys;

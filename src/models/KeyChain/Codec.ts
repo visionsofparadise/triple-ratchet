@@ -1,6 +1,6 @@
 import { Codec } from "bufferfy";
-import { KeyChain } from ".";
 import { ChainKeyCodec } from "./ChainKeyCodec";
+import { KeyChain } from ".";
 
 export const KeyChainPropertiesCodec = Codec.Object({
 	chainKey: Codec.Optional(ChainKeyCodec),

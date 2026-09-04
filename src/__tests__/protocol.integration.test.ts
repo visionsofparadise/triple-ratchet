@@ -19,10 +19,15 @@ describe("Protocol Correctness", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				new TextEncoder().encode("init"),
-				aliceKeys
+				aliceKeys,
 			);
 
-			const bobState = RatchetState.initializeAsResponder(initEnvelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				initEnvelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 			bobState.decrypt(initEnvelope);
 
 			// Bob needs Alice's keyId to send messages back
@@ -88,10 +93,15 @@ describe("Protocol Correctness", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				new TextEncoder().encode("init"),
-				aliceKeys
+				aliceKeys,
 			);
 
-			const bobState = RatchetState.initializeAsResponder(initEnvelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				initEnvelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 			bobState.decrypt(initEnvelope);
 
 			// Bob needs Alice's keyId to send messages back
@@ -149,11 +159,16 @@ describe("Protocol Correctness", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				new TextEncoder().encode("I'm Alice!"),
-				attackerKeys
+				attackerKeys,
 			);
 
 			// Bob expects messages from Alice
-			const bobState = RatchetState.initializeAsResponder(attackerEnvelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				attackerEnvelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 
 			// Signature verification should fail because envelope is signed by attacker
 			expect(compare(attackerEnvelope.publicKey, aliceKeys.publicKey)).not.toBe(0);
@@ -174,7 +189,7 @@ describe("Protocol Correctness", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				new TextEncoder().encode("Hello Bob"),
-				aliceKeys
+				aliceKeys,
 			);
 
 			// Verify signature recovers to Alice's publicKey
@@ -199,10 +214,15 @@ describe("Protocol Correctness", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				new TextEncoder().encode("init"),
-				aliceKeys
+				aliceKeys,
 			);
 
-			const bobState = RatchetState.initializeAsResponder(initEnvelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				initEnvelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 			bobState.decrypt(initEnvelope);
 
 			// Send message 0
@@ -232,10 +252,15 @@ describe("Protocol Correctness", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				new TextEncoder().encode("init"),
-				aliceKeys
+				aliceKeys,
 			);
 
-			const bobState = RatchetState.initializeAsResponder(initEnvelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				initEnvelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 			bobState.decrypt(initEnvelope);
 
 			// Send message 0
@@ -266,10 +291,15 @@ describe("Protocol Correctness", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				new TextEncoder().encode("init"),
-				aliceKeys
+				aliceKeys,
 			);
 
-			const bobState = RatchetState.initializeAsResponder(initEnvelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				initEnvelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 
 			// Add skipped keys with different ages
 			const now = Date.now();
@@ -316,10 +346,15 @@ describe("Protocol Correctness", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				new TextEncoder().encode("init"),
-				aliceKeys
+				aliceKeys,
 			);
 
-			const bobState = RatchetState.initializeAsResponder(initEnvelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				initEnvelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 
 			// Add recent keys
 			const now = Date.now();
@@ -360,13 +395,18 @@ describe("Protocol Correctness", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				new TextEncoder().encode("test"),
-				aliceKeys
+				aliceKeys,
 			);
 
 			expect(envelope.version).toBe(0x01);
 
 			// Should be processable
-			const bobState = RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				envelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 			expect(() => bobState.decrypt(envelope)).not.toThrow();
 		});
 	});
@@ -382,7 +422,7 @@ describe("Protocol Correctness", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				new TextEncoder().encode("test"),
-				aliceKeys
+				aliceKeys,
 			);
 
 			// Envelope is cryptographically bound to Alice's identity
@@ -408,7 +448,7 @@ describe("Protocol Correctness", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				new TextEncoder().encode("test"),
-				aliceKeys
+				aliceKeys,
 			);
 
 			// Tamper with various fields
@@ -444,7 +484,7 @@ describe("Protocol Correctness", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				plaintext,
-				aliceKeys
+				aliceKeys,
 			);
 
 			const envelope1 = aliceState1.encrypt(plaintext, aliceKeys);
@@ -454,7 +494,7 @@ describe("Protocol Correctness", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				plaintext,
-				aliceKeys
+				aliceKeys,
 			);
 
 			const envelope2 = aliceState2.encrypt(plaintext, aliceKeys);
@@ -477,7 +517,7 @@ describe("Protocol Correctness", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				plaintext1,
-				aliceKeys
+				aliceKeys,
 			);
 
 			const envelope1 = state1.encrypt(plaintext1, aliceKeys);
@@ -487,7 +527,7 @@ describe("Protocol Correctness", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				plaintext2,
-				aliceKeys
+				aliceKeys,
 			);
 
 			const envelope2 = state2.encrypt(plaintext2, aliceKeys);
@@ -512,7 +552,7 @@ describe("Protocol Correctness", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				new TextEncoder().encode("init"),
-				aliceKeys
+				aliceKeys,
 			);
 
 			// Capture secrets for multiple messages
@@ -540,7 +580,7 @@ describe("Protocol Correctness", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				new TextEncoder().encode("init"),
-				aliceKeys
+				aliceKeys,
 			);
 
 			// Save first secret

@@ -1,9 +1,9 @@
 import { Codec } from "bufferfy";
-import { RatchetState } from ".";
 import { HashCodec } from "../../utilities/Hash";
 import { KeyIdCodec } from "../RatchetKeys/KeyIdCodec";
 import { RootChainCodec } from "../RootChain/Codec";
 import { MessageSecretCodec } from "./SecretCodec";
+import { RatchetState } from ".";
 
 const SkippedKeyEntryCodec = Codec.Object({
 	messageNumber: Codec.VarInt(60),

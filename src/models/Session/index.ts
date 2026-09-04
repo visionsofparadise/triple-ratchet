@@ -1,14 +1,14 @@
 import { EventEmitter } from "events";
 import { compare } from "uint8array-tools";
 import { ControlMessage } from "../ControlMessage";
-import type { Envelope } from "../Envelope";
-import type { Keys } from "../Keys";
 import { Message } from "../Message";
 import { MessageCodec } from "../Message/Codec";
-import type { RatchetKeys } from "../RatchetKeys";
 import { RatchetState } from "../RatchetState";
 import { SessionCodec, type SessionProperties } from "./Codec";
 import { ControlProtocolController } from "./ControlProtocolController";
+import type { Envelope } from "../Envelope";
+import type { Keys } from "../Keys";
+import type { RatchetKeys } from "../RatchetKeys";
 
 export namespace Session {
 	export interface Properties extends SessionProperties {}
@@ -75,19 +75,29 @@ export class Session implements Session.Properties {
 			if (!this.ratchetState) {
 				const remoteInitiationKeys = await this.controller.getInitiationKeys();
 
-				const result = RatchetState.initializeAsInitiator(this.localKeys.publicKey, this.remotePublicKey, remoteInitiationKeys, data, this.localKeys, this.options);
+				const result = RatchetState.initializeAsInitiator(
+					this.localKeys.publicKey,
+					this.remotePublicKey,
+					remoteInitiationKeys,
+					data,
+					this.localKeys,
+					this.options,
+				);
 
 				this.ratchetState = result.ratchetState;
 
 				const message = new Message({ body: result.envelope });
+
 				this.events.emit("send", message.buffer);
 				this.events.emit("stateChanged");
+
 				return;
 			}
 
 			const envelope = this.ratchetState.encrypt(data, this.localKeys);
 
 			const message = new Message({ body: envelope });
+
 			this.events.emit("send", message.buffer);
 			this.events.emit("stateChanged");
 		} catch (error) {
@@ -150,7 +160,13 @@ export class Session implements Session.Properties {
 				throw new Error("Cannot initialize ratchet as responder without local initiation keys");
 			}
 
-			this.ratchetState = RatchetState.initializeAsResponder(envelope, this.localKeys.publicKey, this.localInitiationKeys, this.remotePublicKey, this.options);
+			this.ratchetState = RatchetState.initializeAsResponder(
+				envelope,
+				this.localKeys.publicKey,
+				this.localInitiationKeys,
+				this.remotePublicKey,
+				this.options,
+			);
 
 			// Delete local initiation keys after ratchet initialized
 			delete this.localInitiationKeys;

@@ -25,7 +25,13 @@ describe("RatchetState", () => {
 			const remoteInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(localKeys.publicKey, remoteKeys.publicKey, remoteInitiationKeys.publicKeys, data, localKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				localKeys.publicKey,
+				remoteKeys.publicKey,
+				remoteInitiationKeys.publicKeys,
+				data,
+				localKeys,
+			);
 
 			const expectedRatchetId = computeRatchetId(localKeys.publicKey, remoteKeys.publicKey);
 			expect(compare(ratchetState.ratchetId, expectedRatchetId)).toBe(0);
@@ -37,7 +43,13 @@ describe("RatchetState", () => {
 			const remoteInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(localKeys.publicKey, remoteKeys.publicKey, remoteInitiationKeys.publicKeys, data, localKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				localKeys.publicKey,
+				remoteKeys.publicKey,
+				remoteInitiationKeys.publicKeys,
+				data,
+				localKeys,
+			);
 
 			expect(compare(ratchetState.remoteKeyId!, remoteInitiationKeys.keyId)).toBe(0);
 		});
@@ -48,7 +60,13 @@ describe("RatchetState", () => {
 			const remoteInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test message");
 
-			const { envelope } = RatchetState.initializeAsInitiator(localKeys.publicKey, remoteKeys.publicKey, remoteInitiationKeys.publicKeys, data, localKeys);
+			const { envelope } = RatchetState.initializeAsInitiator(
+				localKeys.publicKey,
+				remoteKeys.publicKey,
+				remoteInitiationKeys.publicKeys,
+				data,
+				localKeys,
+			);
 
 			expect(envelope.cipherData).toBeDefined();
 			expect(envelope.cipherData.data.length).toBeGreaterThan(0);
@@ -60,7 +78,13 @@ describe("RatchetState", () => {
 			const remoteInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { envelope } = RatchetState.initializeAsInitiator(localKeys.publicKey, remoteKeys.publicKey, remoteInitiationKeys.publicKeys, data, localKeys);
+			const { envelope } = RatchetState.initializeAsInitiator(
+				localKeys.publicKey,
+				remoteKeys.publicKey,
+				remoteInitiationKeys.publicKeys,
+				data,
+				localKeys,
+			);
 
 			expect(envelope.kemCiphertext).toBeDefined();
 			expect(envelope.kemCiphertext!.length).toBe(1568); // ML-KEM-1024 ciphertext
@@ -73,7 +97,13 @@ describe("RatchetState", () => {
 			const data = new TextEncoder().encode("test");
 
 			const before = Date.now();
-			const { ratchetState } = RatchetState.initializeAsInitiator(localKeys.publicKey, remoteKeys.publicKey, remoteInitiationKeys.publicKeys, data, localKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				localKeys.publicKey,
+				remoteKeys.publicKey,
+				remoteInitiationKeys.publicKeys,
+				data,
+				localKeys,
+			);
 			const after = Date.now();
 
 			expect(ratchetState.ratchetAt).toBeGreaterThanOrEqual(before);
@@ -86,7 +116,13 @@ describe("RatchetState", () => {
 			const remoteInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(localKeys.publicKey, remoteKeys.publicKey, remoteInitiationKeys.publicKeys, data, localKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				localKeys.publicKey,
+				remoteKeys.publicKey,
+				remoteInitiationKeys.publicKeys,
+				data,
+				localKeys,
+			);
 
 			// After encrypting first message, message number should be 1
 			expect(ratchetState.rootChain.sendingChain.messageNumber).toBe(1);
@@ -98,7 +134,13 @@ describe("RatchetState", () => {
 			const remoteInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { envelope } = RatchetState.initializeAsInitiator(localKeys.publicKey, remoteKeys.publicKey, remoteInitiationKeys.publicKeys, data, localKeys);
+			const { envelope } = RatchetState.initializeAsInitiator(
+				localKeys.publicKey,
+				remoteKeys.publicKey,
+				remoteInitiationKeys.publicKeys,
+				data,
+				localKeys,
+			);
 
 			// Verify signature recovers to localKeys.publicKey
 			expect(compare(envelope.publicKey, localKeys.publicKey)).toBe(0);
@@ -112,9 +154,20 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { envelope } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { envelope } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
-			const ratchetState = RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const ratchetState = RatchetState.initializeAsResponder(
+				envelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 
 			const expectedRatchetId = computeRatchetId(bobKeys.publicKey, aliceKeys.publicKey);
 			expect(compare(ratchetState.ratchetId, expectedRatchetId)).toBe(0);
@@ -136,7 +189,9 @@ describe("RatchetState", () => {
 				rSignature: aliceKeys.rSign(new Uint8Array(32)),
 			});
 
-			expect(() => RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey)).toThrow("kemCiphertext required");
+			expect(() =>
+				RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey),
+			).toThrow("kemCiphertext required");
 		});
 
 		it("should throw on invalid kemCiphertext length", () => {
@@ -156,7 +211,9 @@ describe("RatchetState", () => {
 				rSignature: aliceKeys.rSign(new Uint8Array(32)),
 			});
 
-			expect(() => RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey)).toThrow("Invalid ML-KEM ciphertext length");
+			expect(() =>
+				RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey),
+			).toThrow("Invalid ML-KEM ciphertext length");
 		});
 
 		it("should initialize both sending and receiving chains", () => {
@@ -165,9 +222,20 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { envelope } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { envelope } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
-			const ratchetState = RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const ratchetState = RatchetState.initializeAsResponder(
+				envelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 
 			expect(ratchetState.rootChain.sendingChain.chainKey).toBeDefined();
 			expect(ratchetState.rootChain.receivingChain.chainKey).toBeDefined();
@@ -179,9 +247,20 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { envelope } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { envelope } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
-			const ratchetState = RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const ratchetState = RatchetState.initializeAsResponder(
+				envelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 
 			// Bob's DH public key should be different from his initiation DH key
 			expect(compare(ratchetState.rootChain.dhPublicKey, bobInitiationKeys.dhPublicKey)).not.toBe(0);
@@ -195,7 +274,13 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data1 = new TextEncoder().encode("first");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data1, aliceKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data1,
+				aliceKeys,
+			);
 
 			const data2 = new TextEncoder().encode("second");
 			const envelope = ratchetState.encrypt(data2, aliceKeys);
@@ -210,8 +295,19 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { envelope } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
-			const ratchetState = RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const { envelope } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
+			const ratchetState = RatchetState.initializeAsResponder(
+				envelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 
 			// Clear sending chain
 			ratchetState.rootChain.sendingChain.chainKey = undefined;
@@ -225,7 +321,13 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
 			// Clear remoteKeyId
 			ratchetState.remoteKeyId = undefined;
@@ -239,7 +341,13 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data1 = new TextEncoder().encode("first");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data1, aliceKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data1,
+				aliceKeys,
+			);
 
 			const messageNumberBefore = ratchetState.rootChain.sendingChain.messageNumber;
 			ratchetState.encrypt(new TextEncoder().encode("second"), aliceKeys);
@@ -254,7 +362,13 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data1 = new TextEncoder().encode("first");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data1, aliceKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data1,
+				aliceKeys,
+			);
 
 			const kemCiphertext = crypto.getRandomValues(new Uint8Array(1568));
 			const envelope = ratchetState.encrypt(new TextEncoder().encode("second"), aliceKeys, kemCiphertext);
@@ -270,9 +384,20 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const originalData = new TextEncoder().encode("test message");
 
-			const { ratchetState: aliceState, envelope } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, originalData, aliceKeys);
+			const { ratchetState: aliceState, envelope } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				originalData,
+				aliceKeys,
+			);
 
-			const bobState = RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				envelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 			const decrypted = bobState.decrypt(envelope);
 
 			expect(compare(decrypted, originalData)).toBe(0);
@@ -284,9 +409,20 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { envelope } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { envelope } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
-			const bobState = RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				envelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 			const messageNumberBefore = bobState.rootChain.receivingChain.messageNumber;
 
 			bobState.decrypt(envelope);
@@ -301,7 +437,13 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState, envelope } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { ratchetState, envelope } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
 			// Create a modified envelope with the SAME DH key so no DH ratchet happens
 			const brokenEnvelope = new Envelope({
@@ -330,9 +472,20 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { envelope } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { envelope } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
-			const bobState = RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				envelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 
 			// Decrypt first message
 			bobState.decrypt(envelope);
@@ -352,8 +505,19 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState: aliceState, envelope } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
-			const bobState = RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const { ratchetState: aliceState, envelope } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
+			const bobState = RatchetState.initializeAsResponder(
+				envelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 			bobState.decrypt(envelope);
 
 			// Bob needs to have his remoteKeyId set (Alice's initiation keys)
@@ -384,7 +548,13 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
 			const messageNumber = ratchetState.rootChain.sendingChain.messageNumber;
 			const newRemoteDhKey = x25519.getPublicKey(x25519.utils.randomSecretKey());
@@ -400,7 +570,13 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
 			const before = Date.now();
 			const newRemoteDhKey = x25519.getPublicKey(x25519.utils.randomSecretKey());
@@ -419,7 +595,13 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
 			const kemCiphertext = ratchetState.performMlKemRatchet(bobInitiationKeys.publicKeys);
 
@@ -432,7 +614,13 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
 			const before = Date.now();
 			ratchetState.performMlKemRatchet(bobInitiationKeys.publicKeys);
@@ -448,7 +636,13 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
 			const messageNumber = ratchetState.rootChain.sendingChain.messageNumber;
 			ratchetState.performMlKemRatchet(bobInitiationKeys.publicKeys);
@@ -464,7 +658,13 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
 			// Set message number to 100
 			ratchetState.rootChain.sendingChain.messageNumber = 100;
@@ -478,7 +678,13 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
 			ratchetState.rootChain.sendingChain.messageNumber = 101;
 
@@ -491,10 +697,16 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
 			// Set ratchetAt to 1 hour ago
-			ratchetState.ratchetAt = Date.now() - (60 * 60 * 1000);
+			ratchetState.ratchetAt = Date.now() - 60 * 60 * 1000;
 
 			expect(ratchetState.shouldRatchet(1000, 60 * 60 * 1000)).toBe(true);
 		});
@@ -505,7 +717,13 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
 			ratchetState.rootChain.sendingChain.messageNumber = 50;
 
@@ -518,7 +736,13 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
 			ratchetState.rootChain.sendingChain.messageNumber = 100;
 
@@ -531,7 +755,13 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
 			ratchetState.rootChain.sendingChain.messageNumber = 50;
 
@@ -547,9 +777,20 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState, envelope } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { ratchetState, envelope } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
-			const bobState = RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				envelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 
 			// Store a skipped key manually
 			const secret = crypto.getRandomValues(new Uint8Array(32));
@@ -576,9 +817,20 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { envelope } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { envelope } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
-			const bobState = RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				envelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 
 			// Store a skipped key
 			const secret = crypto.getRandomValues(new Uint8Array(32));
@@ -606,9 +858,20 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { envelope } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { envelope } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
-			const bobState = RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				envelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 
 			// Try non-existent message number
 			const testEnvelope = new Envelope({
@@ -629,9 +892,20 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { envelope } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { envelope } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
-			const bobState = RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				envelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 
 			const secret = crypto.getRandomValues(new Uint8Array(32));
 			const before = Date.now();
@@ -653,15 +927,26 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { envelope } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { envelope } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
-			const bobState = RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				envelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 
 			// Store old key (25 hours ago)
 			bobState.skippedKeys.push({
 				messageNumber: 1,
 				secret: crypto.getRandomValues(new Uint8Array(32)),
-				createdAt: Date.now() - (25 * 60 * 60 * 1000),
+				createdAt: Date.now() - 25 * 60 * 60 * 1000,
 			});
 
 			// Store recent key
@@ -685,15 +970,26 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { envelope } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { envelope } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
-			const bobState = RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				envelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 
 			// Store recent keys
 			bobState.skippedKeys.push({
 				messageNumber: 1,
 				secret: crypto.getRandomValues(new Uint8Array(32)),
-				createdAt: Date.now() - (1 * 60 * 60 * 1000), // 1 hour ago
+				createdAt: Date.now() - 1 * 60 * 60 * 1000, // 1 hour ago
 			});
 
 			bobState.skippedKeys.push({
@@ -713,9 +1009,20 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { envelope } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { envelope } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
-			const bobState = RatchetState.initializeAsResponder(envelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				envelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 
 			// Store more than MAX_STORED_SKIPPED_KEYS (2000)
 			const now = Date.now();
@@ -749,7 +1056,13 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
 			const props = ratchetState.properties;
 
@@ -769,7 +1082,13 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
 			const buffer = ratchetState.buffer;
 
@@ -783,7 +1102,13 @@ describe("RatchetState", () => {
 			const bobInitiationKeys = new RatchetKeys();
 			const data = new TextEncoder().encode("test");
 
-			const { ratchetState } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, data, aliceKeys);
+			const { ratchetState } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				data,
+				aliceKeys,
+			);
 
 			const byteLength = ratchetState.byteLength;
 

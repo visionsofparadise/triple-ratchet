@@ -238,7 +238,12 @@ describe("Session Integration", () => {
 				aliceKeys,
 			);
 
-			const bobState = RatchetState.initializeAsResponder(initEnvelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				initEnvelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 			bobState.decrypt(initEnvelope);
 
 			// Send messages 0, 1, 2
@@ -281,7 +286,12 @@ describe("Session Integration", () => {
 				aliceKeys,
 			);
 
-			const bobState = RatchetState.initializeAsResponder(initEnvelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				initEnvelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 			bobState.decrypt(initEnvelope);
 
 			// Send 100 more messages to trigger rotation
@@ -311,7 +321,13 @@ describe("Session Integration", () => {
 			const bobKeys = new Keys();
 			const bobInitiationKeys = new RatchetKeys();
 
-			const { ratchetState: aliceState } = RatchetState.initializeAsInitiator(aliceKeys.publicKey, bobKeys.publicKey, bobInitiationKeys.publicKeys, new TextEncoder().encode("init"), aliceKeys);
+			const { ratchetState: aliceState } = RatchetState.initializeAsInitiator(
+				aliceKeys.publicKey,
+				bobKeys.publicKey,
+				bobInitiationKeys.publicKeys,
+				new TextEncoder().encode("init"),
+				aliceKeys,
+			);
 
 			// Set ratchetAt to 2 hours ago
 			aliceState.ratchetAt = Date.now() - 2 * 60 * 60 * 1000;
@@ -336,7 +352,12 @@ describe("Session Integration", () => {
 				aliceKeys,
 			);
 
-			const bobState = RatchetState.initializeAsResponder(initEnvelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				initEnvelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 			bobState.decrypt(initEnvelope);
 
 			// Bob needs Alice's keyId to reply
@@ -379,7 +400,12 @@ describe("Session Integration", () => {
 				aliceKeys,
 			);
 
-			const bobState = RatchetState.initializeAsResponder(initEnvelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				initEnvelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 			bobState.decrypt(initEnvelope);
 
 			// Exchange a few messages
@@ -395,7 +421,12 @@ describe("Session Integration", () => {
 			// ...
 
 			// Restore Bob's session from serialized state
-			const restoredBobState = RatchetState.initializeAsResponder(initEnvelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const restoredBobState = RatchetState.initializeAsResponder(
+				initEnvelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 
 			// Manually reconstruct from buffer (simplified - actual would use codec)
 			// For this test, just verify serialization worked
@@ -420,7 +451,12 @@ describe("Session Integration", () => {
 				aliceKeys,
 			);
 
-			const bobState = RatchetState.initializeAsResponder(initEnvelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				initEnvelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 			bobState.decrypt(initEnvelope);
 
 			// Bob needs Alice's keyId to send messages
@@ -464,7 +500,12 @@ describe("Session Integration", () => {
 				aliceKeys,
 			);
 
-			const bobState = RatchetState.initializeAsResponder(initEnvelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				initEnvelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 			bobState.decrypt(initEnvelope);
 
 			// Alice sends 150 messages, Bob never replies
@@ -499,7 +540,12 @@ describe("Session Integration", () => {
 				aliceKeys,
 			);
 
-			const bobState = RatchetState.initializeAsResponder(initEnvelope, bobKeys.publicKey, bobInitiationKeys, aliceKeys.publicKey);
+			const bobState = RatchetState.initializeAsResponder(
+				initEnvelope,
+				bobKeys.publicKey,
+				bobInitiationKeys,
+				aliceKeys.publicKey,
+			);
 			bobState.decrypt(initEnvelope);
 
 			// Send message 0

@@ -6,12 +6,12 @@ import { secureZero } from "../../utilities/SecureMemory";
 import { CipherData } from "../CipherData";
 import { Envelope } from "../Envelope";
 import { KeyChain } from "../KeyChain";
-import type { Keys } from "../Keys";
-import type { RatchetKeys } from "../RatchetKeys";
 import { MlKemCipherTextCodec } from "../RatchetKeys/MlKemCodec";
-import type { RatchetPublicKeys } from "../RatchetKeys/Public";
 import { RootChain } from "../RootChain";
 import { RatchetStateCodec, type RatchetStateProperties } from "./Codec";
+import type { Keys } from "../Keys";
+import type { RatchetKeys } from "../RatchetKeys";
+import type { RatchetPublicKeys } from "../RatchetKeys/Public";
 
 export namespace RatchetState {
 	export interface Properties extends RatchetStateProperties {}
@@ -72,11 +72,15 @@ export class RatchetState implements RatchetState.Properties {
 			dhSecretKey: new Uint8Array(json.rootChain.dhSecretKey),
 			remoteDhPublicKey: new Uint8Array(json.rootChain.remoteDhPublicKey),
 			sendingChain: new KeyChain({
-				chainKey: json.rootChain.sendingChain.chainKey ? new Uint8Array(json.rootChain.sendingChain.chainKey) : undefined,
+				chainKey: json.rootChain.sendingChain.chainKey
+					? new Uint8Array(json.rootChain.sendingChain.chainKey)
+					: undefined,
 				messageNumber: json.rootChain.sendingChain.messageNumber,
 			}),
 			receivingChain: new KeyChain({
-				chainKey: json.rootChain.receivingChain.chainKey ? new Uint8Array(json.rootChain.receivingChain.chainKey) : undefined,
+				chainKey: json.rootChain.receivingChain.chainKey
+					? new Uint8Array(json.rootChain.receivingChain.chainKey)
+					: undefined,
 				messageNumber: json.rootChain.receivingChain.messageNumber,
 			}),
 		});
@@ -109,7 +113,9 @@ export class RatchetState implements RatchetState.Properties {
 		ratchetState: RatchetState;
 		envelope: Envelope;
 	} {
-		const { cipherText: kemCiphertext, sharedSecret: mlKemSharedSecret } = ml_kem1024.encapsulate(remoteInitiationKeys.encryptionKey);
+		const { cipherText: kemCiphertext, sharedSecret: mlKemSharedSecret } = ml_kem1024.encapsulate(
+			remoteInitiationKeys.encryptionKey,
+		);
 
 		const dhSecretKey = x25519.utils.randomSecretKey();
 		const dhPublicKey = x25519.getPublicKey(dhSecretKey);
@@ -124,6 +130,7 @@ export class RatchetState implements RatchetState.Properties {
 		const sendingChain = new KeyChain({ chainKey: newChainKey });
 		const secretKey = sendingChain.secret;
 		const cipherData = CipherData.encrypt(secretKey, data);
+
 		sendingChain.next();
 
 		const rootChain = new RootChain({
@@ -174,7 +181,9 @@ export class RatchetState implements RatchetState.Properties {
 		}
 
 		if (envelope.kemCiphertext.byteLength !== MlKemCipherTextCodec.byteLength()) {
-			throw new Error(`Invalid ML-KEM ciphertext length: ${envelope.kemCiphertext.byteLength}, expected ${MlKemCipherTextCodec.byteLength()}`);
+			throw new Error(
+				`Invalid ML-KEM ciphertext length: ${envelope.kemCiphertext.byteLength}, expected ${MlKemCipherTextCodec.byteLength()}`,
+			);
 		}
 
 		const mlKemSharedSecret = ml_kem1024.decapsulate(envelope.kemCiphertext, localRatchetKeys.decryptionKey);
@@ -184,11 +193,18 @@ export class RatchetState implements RatchetState.Properties {
 		const initialRootKey = new Uint8Array(32);
 
 		const dhSharedSecret = x25519.getSharedSecret(localRatchetKeys.dhSecretKey, envelope.dhPublicKey);
-		const { newRootKey, newChainKey: receivingChainKey } = RootChain.deriveRootKey(initialRootKey, dhSharedSecret, mlKemSharedSecret);
+		const { newRootKey, newChainKey: receivingChainKey } = RootChain.deriveRootKey(
+			initialRootKey,
+			dhSharedSecret,
+			mlKemSharedSecret,
+		);
 
 		const dhSecretKey = x25519.utils.randomSecretKey();
 		const sendingDhSharedSecret = x25519.getSharedSecret(dhSecretKey, envelope.dhPublicKey);
-		const { newRootKey: finalRootKey, newChainKey: sendingChainKey } = RootChain.deriveRootKey(newRootKey, sendingDhSharedSecret);
+		const { newRootKey: finalRootKey, newChainKey: sendingChainKey } = RootChain.deriveRootKey(
+			newRootKey,
+			sendingDhSharedSecret,
+		);
 
 		const rootChain = new RootChain({
 			rootKey: finalRootKey,
@@ -267,11 +283,15 @@ export class RatchetState implements RatchetState.Properties {
 				dhSecretKey: Array.from(this.rootChain.dhSecretKey),
 				remoteDhPublicKey: Array.from(this.rootChain.remoteDhPublicKey),
 				sendingChain: {
-					chainKey: this.rootChain.sendingChain.chainKey ? Array.from(this.rootChain.sendingChain.chainKey) : undefined,
+					chainKey: this.rootChain.sendingChain.chainKey
+						? Array.from(this.rootChain.sendingChain.chainKey)
+						: undefined,
 					messageNumber: this.rootChain.sendingChain.messageNumber,
 				},
 				receivingChain: {
-					chainKey: this.rootChain.receivingChain.chainKey ? Array.from(this.rootChain.receivingChain.chainKey) : undefined,
+					chainKey: this.rootChain.receivingChain.chainKey
+						? Array.from(this.rootChain.receivingChain.chainKey)
+						: undefined,
 					messageNumber: this.rootChain.receivingChain.messageNumber,
 				},
 			},
@@ -317,6 +337,7 @@ export class RatchetState implements RatchetState.Properties {
 		}
 
 		const messageDifference = envelope.messageNumber - this.rootChain.receivingChain.messageNumber;
+
 		if (messageDifference > this.maxMessageSkip) {
 			throw new Error(`Message skip too large: ${messageDifference} > ${this.maxMessageSkip}`);
 		}
@@ -327,6 +348,7 @@ export class RatchetState implements RatchetState.Properties {
 		}
 
 		const data = envelope.cipherData.decrypt(this.rootChain.receivingChain.secret);
+
 		this.rootChain.receivingChain.next();
 
 		return data;
@@ -380,11 +402,14 @@ export class RatchetState implements RatchetState.Properties {
 
 		// First prune by age
 		const removed: typeof this.skippedKeys = [];
+
 		this.skippedKeys = this.skippedKeys.filter((skippedKey) => {
 			const shouldRemove = now - skippedKey.createdAt > this.skippedKeyMaxAge;
+
 			if (shouldRemove) {
 				removed.push(skippedKey);
 			}
+
 			return !shouldRemove;
 		});
 
@@ -397,11 +422,14 @@ export class RatchetState implements RatchetState.Properties {
 		if (this.skippedKeys.length > this.maxStoredSkippedKeys) {
 			// Sort by createdAt descending (newest first)
 			this.skippedKeys.sort((keyA, keyB) => keyB.createdAt - keyA.createdAt);
+
 			// Keep only the newest maxStoredSkippedKeys, zero out the rest
 			const excess = this.skippedKeys.slice(this.maxStoredSkippedKeys);
+
 			for (const key of excess) {
 				secureZero(key.secret);
 			}
+
 			this.skippedKeys = this.skippedKeys.slice(0, this.maxStoredSkippedKeys);
 		}
 	}

@@ -5,8 +5,8 @@ import { ml_kem1024 } from "@noble/post-quantum/ml-kem.js";
 import { compare, concat } from "uint8array-tools";
 import { KeyChain } from "../KeyChain";
 import { MlKemPublicKeyCodec } from "../RatchetKeys/MlKemCodec";
-import type { RatchetPublicKeys } from "../RatchetKeys/Public";
 import { RootChainCodec, type RootChainProperties } from "./Codec";
+import type { RatchetPublicKeys } from "../RatchetKeys/Public";
 
 export namespace RootChain {
 	export interface Properties extends RootChainProperties {}
@@ -18,7 +18,11 @@ export class RootChain implements RootChain.Properties {
 	private static readonly CHAIN_KEY_SIZE = 32;
 	private static readonly HKDF_OUTPUT_SIZE = RootChain.ROOT_KEY_SIZE + RootChain.CHAIN_KEY_SIZE;
 
-	static deriveRootKey(rootKey: Uint8Array, dhSharedSecret: Uint8Array, mlKemSharedSecret?: Uint8Array): { newRootKey: Uint8Array; newChainKey: Uint8Array } {
+	static deriveRootKey(
+		rootKey: Uint8Array,
+		dhSharedSecret: Uint8Array,
+		mlKemSharedSecret?: Uint8Array,
+	): { newRootKey: Uint8Array; newChainKey: Uint8Array } {
 		const sharedSecret = mlKemSharedSecret ? concat([dhSharedSecret, mlKemSharedSecret]) : dhSharedSecret;
 		const derived = hkdf(sha256, sharedSecret, rootKey, RootChain.ROOT_KEY_INFO, RootChain.HKDF_OUTPUT_SIZE);
 
@@ -70,7 +74,10 @@ export class RootChain implements RootChain.Properties {
 
 		const newDhSecretKey = x25519.utils.randomSecretKey();
 		const sendingDhSharedSecret = x25519.getSharedSecret(newDhSecretKey, remoteDhPublicKey);
-		const { newRootKey: finalRootKey, newChainKey: sendingChainKey } = RootChain.deriveRootKey(newRootKey, sendingDhSharedSecret);
+		const { newRootKey: finalRootKey, newChainKey: sendingChainKey } = RootChain.deriveRootKey(
+			newRootKey,
+			sendingDhSharedSecret,
+		);
 
 		this.rootKey = finalRootKey;
 		this.dhSecretKey = newDhSecretKey;
@@ -82,7 +89,9 @@ export class RootChain implements RootChain.Properties {
 	performMlKemRatchet(initiationKeys: RatchetPublicKeys): Uint8Array {
 		// Guard: validate ML-KEM public key length using codec
 		if (initiationKeys.encryptionKey.byteLength !== MlKemPublicKeyCodec.byteLength()) {
-			throw new Error(`Invalid ML-KEM public key length: ${initiationKeys.encryptionKey.byteLength}, expected ${String(MlKemPublicKeyCodec.byteLength)}`);
+			throw new Error(
+				`Invalid ML-KEM public key length: ${initiationKeys.encryptionKey.byteLength}, expected ${String(MlKemPublicKeyCodec.byteLength)}`,
+			);
 		}
 
 		// Guard: validate DH public key length (X25519)
@@ -94,7 +103,11 @@ export class RootChain implements RootChain.Properties {
 		const newDhSecretKey = x25519.utils.randomSecretKey();
 		const dhSharedSecret = x25519.getSharedSecret(newDhSecretKey, initiationKeys.dhPublicKey);
 
-		const { newRootKey, newChainKey: sendingChainKey } = RootChain.deriveRootKey(this.rootKey, dhSharedSecret, mlKemSharedSecret);
+		const { newRootKey, newChainKey: sendingChainKey } = RootChain.deriveRootKey(
+			this.rootKey,
+			dhSharedSecret,
+			mlKemSharedSecret,
+		);
 
 		this.rootKey = newRootKey;
 		this.dhSecretKey = newDhSecretKey;

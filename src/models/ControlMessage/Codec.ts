@@ -1,7 +1,7 @@
 import { Codec } from "bufferfy";
-import { ControlMessage } from ".";
 import { RSignatureCodec } from "../Keys/Codec";
 import { ControlMessageBodyCodec } from "./BodyCodec";
+import { ControlMessage } from ".";
 
 export const VERSION = {
 	V0: 0,

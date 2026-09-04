@@ -62,6 +62,7 @@ export class KeyChain implements KeyChain.Properties {
 		}
 
 		const oldChainKey = this.chainKey;
+
 		this.chainKey = KeyChain.deriveChainKey(this.chainKey);
 
 		secureZero(oldChainKey);

@@ -1,11 +1,14 @@
 import { Codec } from "bufferfy";
 import { Keys } from "../Keys";
-import type { RSignature } from "../Keys/Codec";
-import type { ControlMessageBodyMap, ControlMessageBodyType } from "./BodyCodec";
 import { ControlMessageCodec, type ControlMessageProperties, ControlMessagePropertiesCodec, VERSION } from "./Codec";
+import type { ControlMessageBodyMap, ControlMessageBodyType } from "./BodyCodec";
+import type { RSignature } from "../Keys/Codec";
 
 export namespace ControlMessage {
-	export type Properties<T extends ControlMessageBodyType = ControlMessageBodyType> = Omit<ControlMessageProperties, "body"> & {
+	export type Properties<T extends ControlMessageBodyType = ControlMessageBodyType> = Omit<
+		ControlMessageProperties,
+		"body"
+	> & {
 		body: ControlMessageBodyMap[T] & {
 			type: T;
 		};
@@ -19,8 +22,13 @@ export namespace ControlMessage {
 	}
 }
 
-export class ControlMessage<T extends ControlMessageBodyType = ControlMessageBodyType> implements ControlMessage.Properties<T> {
-	static create<T extends ControlMessageBodyType>(properties: Pick<ControlMessage.Properties<T>, "body">, keys: Keys): ControlMessage<T> {
+export class ControlMessage<
+	T extends ControlMessageBodyType = ControlMessageBodyType,
+> implements ControlMessage.Properties<T> {
+	static create<T extends ControlMessageBodyType>(
+		properties: Pick<ControlMessage.Properties<T>, "body">,
+		keys: Keys,
+	): ControlMessage<T> {
 		const defaultProperties: Omit<ControlMessage.Properties<T>, "rSignature"> = {
 			version: VERSION.V0,
 			body: properties.body,

@@ -1,7 +1,7 @@
 import { Codec } from "bufferfy";
-import { RatchetPublicKeys } from "./Public";
 import { KeyIdCodec } from "./KeyIdCodec";
 import { MlKemPublicKeyCodec } from "./MlKemCodec";
+import { RatchetPublicKeys } from "./Public";
 import { X25519PublicKeyCodec } from "./X25519Codec";
 
 export const RatchetPublicKeysPropertiesCodec = Codec.Object({

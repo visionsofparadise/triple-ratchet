@@ -11,6 +11,8 @@ build
 dist
 dry.json
 .eslintcache
+tsconfig.tsbuildinfo
+.tools/
 
 # misc
 .DS_Store

@@ -1,7 +1,7 @@
 import { Codec } from "bufferfy";
-import { RatchetKeys } from ".";
 import { MlKemSeedCodec } from "./MlKemCodec";
 import { X25519SecretKeyCodec } from "./X25519Codec";
+import { RatchetKeys } from ".";
 
 export const RatchetKeysPropertiesCodec = Codec.Object({
 	mlKemSeed: MlKemSeedCodec,

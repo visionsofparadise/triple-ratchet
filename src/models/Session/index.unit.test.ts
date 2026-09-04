@@ -41,7 +41,7 @@ describe("Session", () => {
 				remoteKeys.publicKey,
 				remoteInitiationKeys.publicKeys,
 				new TextEncoder().encode("test"),
-				localKeys
+				localKeys,
 			);
 
 			const session = new Session({
@@ -97,7 +97,7 @@ describe("Session", () => {
 				remoteKeys.publicKey,
 				remoteInitiationKeys.publicKeys,
 				new TextEncoder().encode("init"),
-				localKeys
+				localKeys,
 			);
 
 			const session = new Session({
@@ -129,7 +129,7 @@ describe("Session", () => {
 				remoteKeys.publicKey,
 				remoteInitiationKeys.publicKeys,
 				new TextEncoder().encode("init"),
-				localKeys
+				localKeys,
 			);
 
 			const session = new Session({
@@ -158,7 +158,7 @@ describe("Session", () => {
 				remoteKeys.publicKey,
 				remoteInitiationKeys.publicKeys,
 				new TextEncoder().encode("init"),
-				localKeys
+				localKeys,
 			);
 
 			const session = new Session({
@@ -211,7 +211,7 @@ describe("Session", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				originalData,
-				aliceKeys
+				aliceKeys,
 			);
 
 			const message = new Message({ body: envelope });
@@ -242,7 +242,7 @@ describe("Session", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				new TextEncoder().encode("test"),
-				aliceKeys
+				aliceKeys,
 			);
 
 			const message = new Message({ body: envelope });
@@ -273,7 +273,7 @@ describe("Session", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				new TextEncoder().encode("test"),
-				charlieKeys
+				charlieKeys,
 			);
 
 			const message = new Message({ body: envelope });
@@ -302,7 +302,7 @@ describe("Session", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				new TextEncoder().encode("test"),
-				aliceKeys
+				aliceKeys,
 			);
 
 			const message = new Message({ body: envelope });
@@ -331,7 +331,7 @@ describe("Session", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				new TextEncoder().encode("test"),
-				aliceKeys
+				aliceKeys,
 			);
 
 			const message = new Message({ body: envelope });
@@ -359,7 +359,7 @@ describe("Session", () => {
 				bobKeys.publicKey,
 				bobInitiationKeys.publicKeys,
 				new TextEncoder().encode("test"),
-				aliceKeys
+				aliceKeys,
 			);
 
 			const message = new Message({ body: envelope });
@@ -409,7 +409,7 @@ describe("Session", () => {
 				remoteKeys.publicKey,
 				remoteInitiationKeys.publicKeys,
 				new TextEncoder().encode("test"),
-				localKeys
+				localKeys,
 			);
 
 			const session = new Session({
@@ -473,7 +473,7 @@ describe("Session", () => {
 				remoteKeys.publicKey,
 				remoteInitiationKeys.publicKeys,
 				new TextEncoder().encode("init"),
-				localKeys
+				localKeys,
 			);
 
 			const session = new Session({
@@ -512,7 +512,7 @@ describe("Session", () => {
 				remoteKeys.publicKey,
 				remoteInitiationKeys.publicKeys,
 				new TextEncoder().encode("init"),
-				localKeys
+				localKeys,
 			);
 
 			const session = new Session({

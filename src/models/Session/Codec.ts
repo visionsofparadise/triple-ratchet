@@ -1,8 +1,8 @@
 import { Codec } from "bufferfy";
-import { Session } from ".";
 import { KeysCodec, PublicKeyCodec } from "../Keys/Codec";
 import { RatchetKeysCodec } from "../RatchetKeys/Codec";
 import { RatchetStateCodec } from "../RatchetState/Codec";
+import { Session } from ".";
 
 export const SessionPropertiesCodec = Codec.Object({
 	localKeys: KeysCodec,

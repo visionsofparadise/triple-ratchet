@@ -88,7 +88,7 @@ describe("Envelope serialization", () => {
 				previousChainLength: 0,
 				cipherData,
 			},
-			keys
+			keys,
 		);
 
 		// Should recover same public key
