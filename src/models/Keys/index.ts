@@ -1,5 +1,6 @@
 import { secp256k1 } from "@noble/curves/secp256k1.js";
-import { KeysCodec, type KeysProperties, type RSignature } from "./Codec";
+import { Codec } from "bufferfy";
+import { type KeysProperties, KeysPropertiesCodec, type RSignature } from "./Codec";
 
 export namespace Keys {
 	export interface Properties extends KeysProperties {
@@ -84,3 +85,8 @@ export class Keys implements Keys.Properties {
 		return secp256k1.sign(message, this.secretKey, { prehash: false, format: "compact" });
 	}
 }
+
+export const KeysCodec = Codec.Transform(KeysPropertiesCodec, {
+	decode: (properties) => new Keys(properties),
+	encode: (keys) => keys.properties,
+});

@@ -1,8 +1,7 @@
 import { Codec } from "bufferfy";
-import { KeyChainCodec } from "../KeyChain/Codec";
+import { KeyChainCodec } from "../KeyChain";
 import { X25519PublicKeyCodec, X25519SecretKeyCodec } from "../RatchetKeys/X25519Codec";
 import { RootKeyCodec } from "./KeyCodec";
-import { RootChain } from ".";
 
 export const RootChainPropertiesCodec = Codec.Object({
 	rootKey: RootKeyCodec,
@@ -13,8 +12,3 @@ export const RootChainPropertiesCodec = Codec.Object({
 });
 
 export type RootChainProperties = Codec.Type<typeof RootChainPropertiesCodec>;
-
-export const RootChainCodec = Codec.Transform(RootChainPropertiesCodec, {
-	decode: (properties) => new RootChain(properties),
-	encode: (rootChain) => rootChain.properties,
-});

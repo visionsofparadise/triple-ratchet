@@ -1,7 +1,8 @@
 import { hkdf } from "@noble/hashes/hkdf";
 import { sha256 } from "@noble/hashes/sha2";
+import { Codec } from "bufferfy";
 import { secureZero } from "../../utilities/SecureMemory";
-import { KeyChainCodec, type KeyChainProperties } from "./Codec";
+import { type KeyChainProperties, KeyChainPropertiesCodec } from "./Codec";
 
 export namespace KeyChain {
 	export interface Properties extends KeyChainProperties {}
@@ -81,3 +82,8 @@ export class KeyChain implements KeyChain.Properties {
 		this._cachedSecret = undefined;
 	}
 }
+
+export const KeyChainCodec = Codec.Transform(KeyChainPropertiesCodec, {
+	decode: (properties) => new KeyChain(properties),
+	encode: (keyChain) => keyChain.properties,
+});

@@ -1,10 +1,10 @@
 import { EventEmitter } from "events";
+import { Codec } from "bufferfy";
 import { compare } from "uint8array-tools";
 import { ControlMessage } from "../ControlMessage";
-import { Message } from "../Message";
-import { MessageCodec } from "../Message/Codec";
+import { Message, MessageCodec } from "../Message";
 import { RatchetState } from "../RatchetState";
-import { SessionCodec, type SessionProperties } from "./Codec";
+import { type SessionProperties, SessionPropertiesCodec } from "./Codec";
 import { ControlProtocolController } from "./ControlProtocolController";
 import type { Envelope } from "../Envelope";
 import type { Keys } from "../Keys";
@@ -178,3 +178,8 @@ export class Session implements Session.Properties {
 		this.events.emit("stateChanged");
 	}
 }
+
+export const SessionCodec = Codec.Transform(SessionPropertiesCodec, {
+	decode: (properties) => new Session(properties),
+	encode: (session) => session.properties,
+});

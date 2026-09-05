@@ -1,4 +1,5 @@
-import { RatchetPublicKeysCodec, type RatchetPublicKeysProperties } from "./PublicCodec";
+import { Codec } from "bufferfy";
+import { type RatchetPublicKeysProperties, RatchetPublicKeysPropertiesCodec } from "./PublicCodec";
 
 export namespace RatchetPublicKeys {
 	export interface Properties extends RatchetPublicKeysProperties {}
@@ -55,3 +56,8 @@ export class RatchetPublicKeys implements RatchetPublicKeys.Properties {
 		return { keyId, encryptionKey, dhPublicKey };
 	}
 }
+
+export const RatchetPublicKeysCodec = Codec.Transform(RatchetPublicKeysPropertiesCodec, {
+	decode: (properties) => new RatchetPublicKeys(properties),
+	encode: (ratchetPublicKeys) => ratchetPublicKeys.properties,
+});

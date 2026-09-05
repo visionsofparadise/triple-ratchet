@@ -1,6 +1,5 @@
 import { Codec } from "bufferfy";
 import { ChainKeyCodec } from "./ChainKeyCodec";
-import { KeyChain } from ".";
 
 export const KeyChainPropertiesCodec = Codec.Object({
 	chainKey: Codec.Optional(ChainKeyCodec),
@@ -8,8 +7,3 @@ export const KeyChainPropertiesCodec = Codec.Object({
 });
 
 export type KeyChainProperties = Codec.Type<typeof KeyChainPropertiesCodec>;
-
-export const KeyChainCodec = Codec.Transform(KeyChainPropertiesCodec, {
-	decode: (properties) => new KeyChain(properties),
-	encode: (keyChain) => keyChain.properties,
-});

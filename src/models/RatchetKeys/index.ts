@@ -1,8 +1,9 @@
 import { x25519 } from "@noble/curves/ed25519.js";
 import { sha256 } from "@noble/hashes/sha2";
 import { ml_kem1024 } from "@noble/post-quantum/ml-kem.js";
+import { Codec } from "bufferfy";
 import { concat } from "uint8array-tools";
-import { RatchetKeysCodec, type RatchetKeysProperties } from "./Codec";
+import { type RatchetKeysProperties, RatchetKeysPropertiesCodec } from "./Codec";
 import { KeyIdCodec } from "./KeyIdCodec";
 import { MlKemSeedCodec } from "./MlKemCodec";
 import { RatchetPublicKeys } from "./Public";
@@ -55,3 +56,9 @@ export class RatchetKeys implements RatchetKeys.Properties {
 		return new RatchetPublicKeys(this);
 	}
 }
+
+export const RatchetKeysCodec = Codec.Transform(RatchetKeysPropertiesCodec, {
+	isValid: (value) => value instanceof RatchetKeys,
+	decode: (properties) => new RatchetKeys(properties),
+	encode: (ratchetKeys) => ratchetKeys.properties,
+});

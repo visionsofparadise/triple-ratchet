@@ -1,6 +1,6 @@
 import { Codec } from "bufferfy";
 import { Keys } from "../Keys";
-import { ControlMessageCodec, type ControlMessageProperties, ControlMessagePropertiesCodec, VERSION } from "./Codec";
+import { type ControlMessageProperties, ControlMessagePropertiesCodec, VERSION } from "./Codec";
 import type { ControlMessageBodyMap, ControlMessageBodyType } from "./BodyCodec";
 import type { RSignature } from "../Keys/Codec";
 
@@ -90,3 +90,9 @@ export class ControlMessage<
 		return this.cache.publicKey ?? (this.cache.publicKey = Keys.recover(this.rSignature, this.hash));
 	}
 }
+
+export const ControlMessageCodec = Codec.Transform(ControlMessagePropertiesCodec, {
+	isValid: (value) => value instanceof ControlMessage,
+	decode: (properties) => new ControlMessage(properties),
+	encode: (controlMessage) => controlMessage.properties,
+});

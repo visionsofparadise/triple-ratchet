@@ -1,5 +1,6 @@
 import { xchacha20poly1305 } from "@noble/ciphers/chacha.js";
-import { type CipherDataProperties, NonceCodec } from "./Codec";
+import { Codec } from "bufferfy";
+import { type CipherDataProperties, CipherDataPropertiesCodec, NonceCodec } from "./Codec";
 
 export namespace CipherData {
 	export interface Properties extends CipherDataProperties {
@@ -37,3 +38,9 @@ export class CipherData implements CipherData.Properties {
 		return cipher.decrypt(this.data);
 	}
 }
+
+export const CipherDataCodec = Codec.Transform(CipherDataPropertiesCodec, {
+	isValid: (value) => value instanceof CipherData,
+	decode: (properties) => new CipherData(properties),
+	encode: (cipherData) => cipherData.properties,
+});

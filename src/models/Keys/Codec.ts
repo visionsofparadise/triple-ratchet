@@ -1,5 +1,4 @@
 import { Codec } from "bufferfy";
-import { Keys } from ".";
 
 export const SecretKeyCodec = Codec.Bytes(32);
 export const PublicKeyCodec = Codec.Bytes(33);
@@ -17,8 +16,3 @@ export const KeysPropertiesCodec = Codec.Object({
 });
 
 export type KeysProperties = Codec.Type<typeof KeysPropertiesCodec>;
-
-export const KeysCodec = Codec.Transform(KeysPropertiesCodec, {
-	decode: (properties) => new Keys(properties),
-	encode: (keys) => keys.properties,
-});

@@ -1,5 +1,6 @@
 import { x25519 } from "@noble/curves/ed25519.js";
 import { ml_kem1024 } from "@noble/post-quantum/ml-kem.js";
+import { Codec } from "bufferfy";
 import { compare } from "uint8array-tools";
 import { computeRatchetId } from "../../utilities/computeRatchetId";
 import { secureZero } from "../../utilities/SecureMemory";
@@ -8,7 +9,7 @@ import { Envelope } from "../Envelope";
 import { KeyChain } from "../KeyChain";
 import { MlKemCipherTextCodec } from "../RatchetKeys/MlKemCodec";
 import { RootChain } from "../RootChain";
-import { RatchetStateCodec, type RatchetStateProperties } from "./Codec";
+import { type RatchetStateProperties, RatchetStatePropertiesCodec } from "./Codec";
 import type { Keys } from "../Keys";
 import type { RatchetKeys } from "../RatchetKeys";
 import type { RatchetPublicKeys } from "../RatchetKeys/Public";
@@ -516,3 +517,8 @@ export class RatchetState implements RatchetState.Properties {
 		return undefined;
 	}
 }
+
+export const RatchetStateCodec = Codec.Transform(RatchetStatePropertiesCodec, {
+	decode: (properties) => new RatchetState(properties),
+	encode: (ratchetState) => ratchetState.properties,
+});

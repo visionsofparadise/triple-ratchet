@@ -3,7 +3,7 @@ import { compare } from "uint8array-tools";
 import { createHash } from "../../utilities/Hash";
 import { Keys } from "../Keys";
 import { MlKemCipherTextCodec } from "../RatchetKeys/MlKemCodec";
-import { EnvelopeCodec, type EnvelopeProperties, EnvelopePropertiesCodec } from "./Codec";
+import { type EnvelopeProperties, EnvelopePropertiesCodec } from "./Codec";
 import type { RequiredProperties } from "../../utilities/RequiredProperties";
 import type { CipherData } from "../CipherData";
 import type { RSignature } from "../Keys/Codec";
@@ -191,3 +191,9 @@ export class Envelope implements Envelope.Properties {
 		}
 	}
 }
+
+export const EnvelopeCodec = Codec.Transform(EnvelopePropertiesCodec, {
+	isValid: (value) => value instanceof Envelope,
+	decode: (properties, buffer) => new Envelope(properties, { buffer, byteLength: buffer.byteLength }),
+	encode: (envelope) => envelope.properties,
+});

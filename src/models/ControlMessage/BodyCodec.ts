@@ -1,5 +1,5 @@
 import { Codec } from "bufferfy";
-import { RatchetPublicKeysCodec } from "../RatchetKeys/PublicCodec";
+import { RatchetPublicKeysCodec } from "../RatchetKeys/Public";
 import { TransactionIdCodec } from "../TransactionId/Codec";
 
 export enum ControlMessageBodyType {

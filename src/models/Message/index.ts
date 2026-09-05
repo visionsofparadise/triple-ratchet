@@ -1,5 +1,6 @@
+import { Codec } from "bufferfy";
 import { MAGIC_BYTES } from "../../utilities/magicBytes";
-import { MessageCodec, type MessageProperties, VERSION } from "./Codec";
+import { type MessageProperties, MessagePropertiesCodec, VERSION } from "./Codec";
 import type { ControlMessage } from "../ControlMessage";
 import type { Envelope } from "../Envelope";
 
@@ -30,3 +31,9 @@ export class Message implements Message.Properties {
 		return { magicBytes, body };
 	}
 }
+
+export const MessageCodec = Codec.Transform(MessagePropertiesCodec, {
+	isValid: (value) => value instanceof Message,
+	decode: (properties) => new Message(properties),
+	encode: (message) => message.properties,
+});
