@@ -10,5 +10,3 @@ export const RatchetPublicKeysPropertiesCodec = Codec.Object({
 });
 
 export type RatchetPublicKeysProperties = Codec.Type<typeof RatchetPublicKeysPropertiesCodec>;
-
-export type RatchetKeysPublic = RatchetPublicKeysProperties;

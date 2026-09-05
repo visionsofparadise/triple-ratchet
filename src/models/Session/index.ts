@@ -158,7 +158,7 @@ export class Session implements Session.Properties {
 	}
 }
 
-export const SessionCodec = Codec.Transform(SessionPropertiesCodec, {
+const SessionCodec = Codec.Transform(SessionPropertiesCodec, {
 	decode: (properties) => new Session(properties),
 	encode: (session) => session.properties,
 });

@@ -269,7 +269,7 @@ class RatchetKeys {
 
 ## Architecture
 
-```
+```text
 Session (event-based communication)
   ├─ Keys (secp256k1 identity)
   ├─ RatchetKeys (ML-KEM-1024 + X25519 initiation keys)
