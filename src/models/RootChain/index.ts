@@ -88,14 +88,12 @@ export class RootChain implements RootChain.Properties {
 	}
 
 	performMlKemRatchet(initiationKeys: RatchetPublicKeys): Uint8Array {
-		// Guard: validate ML-KEM public key length using codec
 		if (initiationKeys.encryptionKey.byteLength !== MlKemPublicKeyCodec.byteLength()) {
 			throw new Error(
 				`Invalid ML-KEM public key length: ${initiationKeys.encryptionKey.byteLength}, expected ${String(MlKemPublicKeyCodec.byteLength)}`,
 			);
 		}
 
-		// Guard: validate DH public key length (X25519)
 		if (initiationKeys.dhPublicKey.byteLength !== 32) {
 			throw new Error(`Invalid DH public key length: ${initiationKeys.dhPublicKey.byteLength}, expected 32`);
 		}

@@ -24,22 +24,21 @@ export namespace Envelope {
 	}
 }
 
-// Low-order X25519 points that should be rejected
 const LOW_ORDER_POINTS = [
-	new Uint8Array(32), // All zeros
-	new Uint8Array(32).fill(1), // Point of order 1
+	new Uint8Array(32),
+	new Uint8Array(32).fill(1),
 	new Uint8Array([
 		0x5f, 0x9c, 0x95, 0xbc, 0xa3, 0x50, 0x8c, 0x24, 0xb1, 0xd0, 0xb1, 0x55, 0x9c, 0x83, 0xef, 0x5b, 0x04, 0x44, 0x5c,
 		0xc4, 0x58, 0x1c, 0x8e, 0x86, 0xd8, 0x22, 0x4e, 0xdd, 0xd0, 0x9f, 0x11, 0x57,
-	]), // Point of order 2
+	]),
 	new Uint8Array([
 		0xe0, 0xeb, 0x7a, 0x7c, 0x3b, 0x41, 0xb8, 0xae, 0x16, 0x56, 0xe3, 0xfa, 0xf1, 0x9f, 0xc4, 0x6a, 0xda, 0x09, 0x8d,
 		0xeb, 0x9c, 0x32, 0xb1, 0xfd, 0x86, 0x62, 0x05, 0x16, 0x5f, 0x49, 0xb8, 0x00,
-	]), // Point of order 4
+	]),
 	new Uint8Array([
 		0xec, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f,
-	]), // Point of order 8
+	]),
 ];
 
 export class Envelope implements Envelope.Properties {
@@ -138,9 +137,6 @@ export class Envelope implements Envelope.Properties {
 		};
 	}
 
-	/**
-	 * Validate envelope fields (protocol version, field lengths, cryptographic constraints)
-	 */
 	validate(): void {
 		if (this.version !== Envelope.PROTOCOL_VERSION) {
 			throw new Error(`Unsupported protocol version: ${this.version}, expected ${Envelope.PROTOCOL_VERSION}`);
@@ -168,7 +164,6 @@ export class Envelope implements Envelope.Properties {
 			throw new Error(`Invalid previousChainLength: ${this.previousChainLength}`);
 		}
 
-		// Reasonable upper bound to catch corruption or attacks
 		if (this.previousChainLength > 1_000_000) {
 			throw new Error(`previousChainLength too large: ${this.previousChainLength}`);
 		}
@@ -180,9 +175,6 @@ export class Envelope implements Envelope.Properties {
 		}
 	}
 
-	/**
-	 * Verify signature against expected public key
-	 */
 	verify(publicKey: Uint8Array): void {
 		this.validate();
 

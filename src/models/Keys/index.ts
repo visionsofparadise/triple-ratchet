@@ -9,10 +9,6 @@ export namespace Keys {
 }
 
 export class Keys implements Keys.Properties {
-	/**
-	 * Constant-time byte array comparison to prevent timing side-channels.
-	 * Always compares all bytes regardless of when a mismatch occurs.
-	 */
 	private static constantTimeEqual(valueA: Uint8Array, valueB: Uint8Array): boolean {
 		if (valueA.length !== valueB.length) return false;
 

@@ -401,7 +401,6 @@ export class RatchetState implements RatchetState.Properties {
 	pruneSkippedKeys(): void {
 		const now = Date.now();
 
-		// First prune by age
 		const removed: typeof this.skippedKeys = [];
 
 		this.skippedKeys = this.skippedKeys.filter((skippedKey) => {
@@ -414,17 +413,13 @@ export class RatchetState implements RatchetState.Properties {
 			return !shouldRemove;
 		});
 
-		// Zero out removed keys
 		for (const key of removed) {
 			secureZero(key.secret);
 		}
 
-		// Then enforce count limit, keeping most recent keys
 		if (this.skippedKeys.length > this.maxStoredSkippedKeys) {
-			// Sort by createdAt descending (newest first)
 			this.skippedKeys.sort((keyA, keyB) => keyB.createdAt - keyA.createdAt);
 
-			// Keep only the newest maxStoredSkippedKeys, zero out the rest
 			const excess = this.skippedKeys.slice(this.maxStoredSkippedKeys);
 
 			for (const key of excess) {

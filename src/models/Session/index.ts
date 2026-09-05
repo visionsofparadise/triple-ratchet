@@ -23,9 +23,6 @@ export namespace Session {
 	}
 }
 
-/**
- * Session manages encrypted communication with a single peer
- */
 export class Session implements Session.Properties {
 	events: EventEmitter<Session.EventMap>;
 
@@ -48,7 +45,6 @@ export class Session implements Session.Properties {
 
 		this.controller = new ControlProtocolController(this.localKeys);
 
-		// Forward controller events
 		this.controller.events.on("send", (buffer) => this.events.emit("send", buffer));
 		this.controller.events.on("error", (error) => this.events.emit("error", error));
 	}
@@ -67,9 +63,6 @@ export class Session implements Session.Properties {
 		return { localKeys, localInitiationKeys, remotePublicKey, ratchetState };
 	}
 
-	/**
-	 * Send encrypted data to the peer
-	 */
 	async send(data: Uint8Array): Promise<void> {
 		try {
 			if (!this.ratchetState) {
@@ -105,9 +98,6 @@ export class Session implements Session.Properties {
 		}
 	}
 
-	/**
-	 * Receive and process message from peer (ControlMessage or Envelope)
-	 */
 	receive(buffer: Uint8Array): void {
 		try {
 			const message = MessageCodec.decode(buffer);
@@ -116,7 +106,6 @@ export class Session implements Session.Properties {
 				throw new Error("Invalid control message signature");
 			}
 
-			// Handle ControlMessage
 			if (message.body instanceof ControlMessage) {
 				const controlMessage = message.body;
 
@@ -131,9 +120,6 @@ export class Session implements Session.Properties {
 		}
 	}
 
-	/**
-	 * Handle incoming control messages
-	 */
 	private handleControlMessage(controlMessage: ControlMessage): void {
 		const localInitiationKeys = this.controller.handleControlMessage(controlMessage);
 
@@ -142,18 +128,12 @@ export class Session implements Session.Properties {
 		}
 	}
 
-	/**
-	 * Close the session and cleanup resources
-	 */
 	close(): void {
 		this.controller.events.removeAllListeners();
 		this.controller.close();
 		this.events.removeAllListeners();
 	}
 
-	/**
-	 * Handle incoming envelopes
-	 */
 	private handleEnvelope(envelope: Envelope): void {
 		if (!this.ratchetState) {
 			if (!this.localInitiationKeys) {
@@ -168,7 +148,6 @@ export class Session implements Session.Properties {
 				this.options,
 			);
 
-			// Delete local initiation keys after ratchet initialized
 			delete this.localInitiationKeys;
 		}
 

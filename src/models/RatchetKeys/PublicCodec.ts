@@ -11,5 +11,4 @@ export const RatchetPublicKeysPropertiesCodec = Codec.Object({
 
 export type RatchetPublicKeysProperties = Codec.Type<typeof RatchetPublicKeysPropertiesCodec>;
 
-// Legacy type alias
 export type RatchetKeysPublic = RatchetPublicKeysProperties;

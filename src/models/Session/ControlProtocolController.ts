@@ -15,9 +15,6 @@ export namespace ControlProtocolController {
 	}
 }
 
-/**
- * Handles control message protocol (in-band key exchange)
- */
 export class ControlProtocolController {
 	readonly events: EventEmitter<ControlProtocolController.EventMap>;
 	private localKeys: Keys;
@@ -35,9 +32,6 @@ export class ControlProtocolController {
 		this.events = new EventEmitter();
 	}
 
-	/**
-	 * Request initiation keys from remote peer with timeout
-	 */
 	getInitiationKeys(timeoutMs = 5000): Promise<RatchetPublicKeys> {
 		const transactionId = createTransactionId();
 		const transactionKey = hex.encode(transactionId);
@@ -66,9 +60,6 @@ export class ControlProtocolController {
 		});
 	}
 
-	/**
-	 * Handle incoming control messages
-	 */
 	handleControlMessage(controlMessage: ControlMessage): RatchetKeys | undefined {
 		switch (controlMessage.body.type) {
 			case ControlMessageBodyType.GET_INITIATION_KEYS: {
@@ -109,9 +100,6 @@ export class ControlProtocolController {
 		}
 	}
 
-	/**
-	 * Cleanup all pending requests and timeouts
-	 */
 	close(): void {
 		for (const [_key, pending] of this.pendingInitiationRequests.entries()) {
 			clearTimeout(pending.timeout);
